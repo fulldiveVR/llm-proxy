@@ -1,54 +1,25 @@
 env: development
 
-auth:
-  jwtSecret: "local"
+llmProxy:
+  openai:
+    apiKey: "your-openai-api-key"
+    defaultModel: "gpt-4"
+    maxTokens: 2048
+  anthropic:
+    apiKey: "your-anthropic-api-key"
+    defaultModel: "claude-3-5-sonnet-20241022"
+    maxTokens: 2048
+  vertex:
+    projectId: "your-gcp-project-id"
+    location: "us-central1"
+    defaultModel: "gemini-1.5-pro"
+    maxTokens: 2048
 
-template:
-  exampleConfigKey: "exampleConfigValue"
+tokenAnalytics:
+  langfuse:
+    secretKey: "your-langfuse-secret-key"
+    publicKey: "your-langfuse-public-key"
+    baseUrl: "https://cloud.langfuse.com"
 
 http:
-  port: 8080
-
-rmq:
-  exchanges:
-    - name: "fanout.auth.user.created"
-      type: "fanout"
-    - name: "fanout.auth.user.updated"
-      type: "fanout"
-    - name: "topic.from.service-name"
-      type: "topic"
-    - name: "topic.service-name.to"
-      type: "topic"
-
-mongodb:
-  connectionString: "mongodb://mongodb"
-  dbName: "template-api"
-  options:
-    maxConnecting: 50
-    directConnection: false
-  collections:
-    - name: users
-      indexes:
-        - keys:
-            id: 1
-          options:
-            unique: true
-            background: true
-        - keys:
-            "provider.email.id": 1
-            "provider.visitor.id": 1
-          options:
-            unique: true
-            background: true
-        - keys:
-            "provider.email.id": 1
-          options:
-            unique: true
-            background: true
-            sparse: true
-        - keys:
-            "provider.visitor.id": 1
-          options:
-            unique: true
-            background: true
-            sparse: true
+  port: 54011

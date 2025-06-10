@@ -1,13 +1,24 @@
-mongodb:
-  connectionString: MONGO_URL
-  dbName: MONGO_DATABASE
-
-auth:
-  jwtSecret: JWT_SECRET
-
 env: NODE_ENV
 
 host: HOST
 
-rmq:
-  uri: RABBITMQ_URI
+llmProxy:
+  openai:
+    apiKey: OPENAI_API_KEY
+    defaultModel: OPENAI_MODEL
+    maxTokens: OPENAI_MAX_TOKENS
+  anthropic:
+    apiKey: ANTHROPIC_API_KEY
+    defaultModel: ANTHROPIC_MODEL
+    maxTokens: ANTHROPIC_MAX_TOKENS
+  vertex:
+    projectId: VERTEX_PROJECT_ID
+    location: VERTEX_LOCATION
+    defaultModel: VERTEX_MODEL
+    maxTokens: VERTEX_MAX_TOKENS
+
+tokenAnalytics:
+  langfuse:
+    secretKey: LANGFUSE_SECRET_KEY
+    publicKey: LANGFUSE_PUBLIC_KEY
+    baseUrl: LANGFUSE_BASE_URL

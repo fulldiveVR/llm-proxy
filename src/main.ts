@@ -23,11 +23,9 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   })
 
-  // For apps with public API
-  await Promise.all([app.listen(port), app.startAllMicroservices()])
-
-  // For apps without public API
-  // await Promise.all([app.init(), app.startAllMicroservices()])
+  // Start the HTTP server
+  await app.listen(port)
+  console.log(`Application is running on: http://localhost:${port}`)
 }
 
 function setupSwagger(app: INestApplication): void {
