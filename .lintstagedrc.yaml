@@ -1,0 +1,6 @@
+"*.ts":
+  - organize-imports-cli
+  - "tslint --fix"
+  - "prettier --write"
+"*.{js,json,yml,yaml,md}":
+  - "prettier --write"

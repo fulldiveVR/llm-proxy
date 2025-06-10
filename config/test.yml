@@ -1,0 +1,10 @@
+env: test
+
+http:
+  port: 8080
+
+mongodb:
+  connectionString: "mongodb://localhost"
+  dbName: "template-api"
+  options:
+    directConnection: true

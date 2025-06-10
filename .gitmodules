@@ -1,0 +1,3 @@
+[submodule "domain"]
+	path = domain
+	url = git@github.com:fulldiveVR/ai-domain.git

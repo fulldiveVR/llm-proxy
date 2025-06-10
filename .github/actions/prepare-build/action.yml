@@ -1,0 +1,28 @@
+name: 'Prepare build'
+description: 'Prepare the build by setting up the SSH key and checking out the repository.'
+inputs:
+  ssh-key:
+    description: 'The SSH key to use for checking out the repository.'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup SSH key
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ inputs.ssh-key }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'yarn'
+        cache-dependency-path: yarn.lock
+
+    - name: Install dependencies
+      shell: bash
+      run: yarn --frozen-lockfile

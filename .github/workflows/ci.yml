@@ -1,0 +1,57 @@
+name: CI Pipeline
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.SSH_GITHUB_PRIVATE_KEY }}
+          submodules: true
+
+      - uses: ./.github/actions/prepare-build
+        with:
+          ssh-key: ${{ secrets.SSH_GITHUB_PRIVATE_KEY }}
+
+      - run: yarn lint
+
+      - run: echo "🍏 This job's status is ${{ job.status }}."
+
+  build:
+    name: Build
+    runs-on: ubuntu-22.04
+    steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.SSH_GITHUB_PRIVATE_KEY }}
+          submodules: true
+
+      - uses: ./.github/actions/prepare-build
+        with:
+          ssh-key: ${{ secrets.SSH_GITHUB_PRIVATE_KEY }}
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - run: yarn generate:domain
+      - run: yarn build
+
+      - run: echo "🍏 This job's status is ${{ job.status }}."

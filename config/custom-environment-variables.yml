@@ -1,0 +1,13 @@
+mongodb:
+  connectionString: MONGO_URL
+  dbName: MONGO_DATABASE
+
+auth:
+  jwtSecret: JWT_SECRET
+
+env: NODE_ENV
+
+host: HOST
+
+rmq:
+  uri: RABBITMQ_URI

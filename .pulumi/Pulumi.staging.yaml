@@ -1,0 +1,35 @@
+#config:
+#  aiwize-auth:base-stack:
+#    cfStackName: ai-wayz/ai-wayz-infrastructure/dev
+#    stackName: ai-wayz/ai-wayz-infrastructure/staging
+#  aiwize-auth:buckets: {}
+#  aiwize-auth:discord-alerts:
+#    webhookId: "1106571237037191309"
+#  aiwize-auth:discord-alerts-token:
+#    secure: AAABAPVQYpaSTgyamHg8m/X1TKyXMNLnlF1V5knIFJ/0P5EVvnCXIvExm3NdfP48fwFL6Y8Qz8iyXEA8I6fR+GADWQtyLCDkS8+3yLouMWTLC6f2CSwVT3S5LF6g76MHY9Motw==
+#  aiwize-auth:mailgun-api-key:
+#    secure: AAABAMQw5sx6f9l/E8XtZS8roouxEDwCK5CMjWOoqw6ejdXwwGLKa1A/1dJlcB7jD+lq9lrOvWB74JpT47wr3mPd3yI=
+#  aiwize-auth:openapi-jwt-secret:
+#    secure: AAABAIu+Ui5q2pUban8UaNSW5/wtEafzdssH6zCNZOzmff6UomlBtgxAqHW/ddm6ENugeyCamdbGhRUsIN0=
+#  aiwize-auth:service:
+#    k8s:
+#      domain: auth-api.aiwayz.com
+#      env:
+#        DASHBOARD_URL: dashboard.aiwayz.com
+#        HOST: auth-api.aiwayz.com
+#        NODE_ENV: production
+#        COOKIE_DOMAIN: .aiwayz.com
+#      image: asia.gcr.io/ai-east/aiwize-auth:latest
+#      port: 8080
+#      secretEnv:
+#        JWT_SECRET: openapi-jwt-secret
+#        MAILGUN_API_KEY: mailgun-api-key
+#    mongo:
+#      databases:
+#        - dbName: auth
+#          username: aiwize-auth
+#    name: aiwize-auth
+#  aiwize-auth:telegram:
+#    defaultChatId: "-985701161"
+#  aiwize-auth:telegram-bot-token:
+#    secure: AAABAJQCfTGZEypg38dEJI9otYlKMd+Md+1NVhFmkelLRGipvdFNE/oA/bprHVOjmaNHN7d98RZ+MAucajbkCPacj3BceVgbLkV2dzsr

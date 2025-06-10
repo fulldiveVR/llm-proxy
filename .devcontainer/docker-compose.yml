@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  app:
+    hostname: template-api
+    environment:
+      RABBITMQ_URI: "amqp://admin:admin@rabbitmq:5672"
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+
+  mongodb:
+    image: bitnami/mongodb:4.4
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGODB_REPLICA_SET_MODE: "primary"
+      MONGODB_REPLICA_SET_NAME: "rs0"
+      ALLOW_EMPTY_PASSWORD: "yes"
+    healthcheck:
+      test: 'mongo --eval "db.adminCommand(''ping'')" mongodb://localhost/local?replicaSet=rs0'
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    logging:
+      driver: none
+
+  rabbitmq:
+    image: "rabbitmq:4.0-management"
+    environment:
+      RABBITMQ_DEFAULT_VHOST: "/"
+      RABBITMQ_NODENAME: "rabbit@localhost"
+      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "admin"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq/mnesia
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    ports:
+      - 5672:5672
+      - 15672:15672
+    expose:
+      - 15672
+
+volumes:
+  mongodb_data:
+  rabbitmq_data:

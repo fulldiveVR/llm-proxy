@@ -1,0 +1,22 @@
+# App specific
+/src/domain/_generated/auth/
+
+# General
+*.log
+*.schema.json
+.DS_Store
+.idea/
+.nyc_output/
+.vscode/
+/coverage/
+/doc/
+/node_modules/
+yarn-error.log
+config/local.yml
+
+# Schemas
+src/api/schemas/specs/*
+
+# Built JS in our apps
+/build*
+/dist*

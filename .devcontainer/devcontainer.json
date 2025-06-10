@@ -1,0 +1,53 @@
+{
+    "name": "Template-API",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspace",
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {
+            "version": "latest"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": 20
+        },
+        "ghcr.io/devcontainers/features/common-utils:1": {
+            "username": "vscode",
+            "uid": 1000,
+            "gid": 1000,
+            "installZsh": true,
+            "installOhMyZsh": true,
+            "configureZshAsDefaultShell": true,
+            "upgradePackages": true
+        }
+    },
+    "hostRequirements": {
+        "cpus": 4,
+        "memory": "8gb",
+        "storage": "32gb"
+    },
+    "portsAttributes": {
+        "8080": {
+            "label": "Backend",
+            "onAutoForward": "silent",
+            "protocol": "http"
+        },
+        "15672": {
+            "label": "RabbitMQ Management",
+            "onAutoForward": "silent",
+            "protocol": "http"
+        }
+    },
+    "forwardPorts": [
+        8080,
+        15672
+    ],
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": [
+        "bash",
+        ".devcontainer/boot.sh"
+    ]
+    // Configure tool-specific properties.
+    // "customizations": {},
+    // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+    // "remoteUser": "root"
+}
