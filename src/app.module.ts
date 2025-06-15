@@ -1,20 +1,14 @@
 import { Module } from "@nestjs/common"
-import { EventEmitterModule } from "@nestjs/event-emitter"
 
 import { InfrastructureModule } from "./infrastructure"
-import { AuthModule } from "./auth"
-import { UserModule } from "./user"
-import { TemplateModule } from "./template"
+import { TokenAnalyticsModule } from "./token-analytics"
+import { LLMProxyModule } from "./llm-proxy"
 
 @Module({
   imports: [
-    EventEmitterModule.forRoot(),
     InfrastructureModule,
-    AuthModule,
-    UserModule,
-
-    // Application modules go here
-    TemplateModule,
+    TokenAnalyticsModule,
+    LLMProxyModule,
   ],
 })
 export class AppModule {}
