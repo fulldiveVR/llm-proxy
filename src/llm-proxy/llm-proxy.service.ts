@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { generateText, streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -20,7 +20,7 @@ export class LLMProxyService {
   private readonly vertexProvider;
 
   constructor(
-    @Inject("CONFIG") private config: LLMProxyConfig,
+    private config: LLMProxyConfig,
     private tokenAnalytics: TokenAnalyticsService
   ) {
     this.logger.log('✅ LLM Proxy Service initialized successfully');
