@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject } from "@nestjs/common";
 import { generateText, streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -20,9 +20,10 @@ export class LLMProxyService {
   private readonly vertexProvider;
 
   constructor(
-    private readonly tokenAnalytics: TokenAnalyticsService,
-    private readonly config: LLMProxyConfig
+    @Inject("CONFIG") private config: LLMProxyConfig,
+    private tokenAnalytics: TokenAnalyticsService
   ) {
+    this.logger.log('✅ LLM Proxy Service initialized successfully');
     this.openaiProvider = createOpenAI({
       apiKey: this.config.openai.apiKey,
     });
@@ -63,9 +64,31 @@ export class LLMProxyService {
     }
   }
 
-  async generateResponse(request: ILLMRequest): Promise<ChatCompletionResponseDto> {
-    const { messages, model, provider = "openai", temperature, max_tokens, user } = request;
+  /**
+   * Automatically detect provider based on model name
+   */
+  private detectProvider(model: string): "openai" | "anthropic" | "vertex" {
+    const modelLower = model.toLowerCase();
     
+    // Anthropic models
+    if (modelLower.includes('claude')) {
+      return 'anthropic';
+    }
+    
+    // Vertex AI models  
+    if (modelLower.includes('gemini') || modelLower.includes('vertex')) {
+      return 'vertex';
+    }
+    
+    // Default to OpenAI for GPT models and others
+    return 'openai';
+  }
+
+  async generateResponse(request: ILLMRequest): Promise<ChatCompletionResponseDto> {
+    const { messages, model, temperature, max_tokens, user } = request;
+    
+    // Auto-detect provider if not specified
+    const provider = request.provider || this.detectProvider(model);
     const selectedProvider = this.getProvider(provider);
     const selectedModel = model || this.getDefaultModel(provider);
 
@@ -85,8 +108,6 @@ export class LLMProxyService {
     const { trace, generation } = await this.tokenAnalytics.startSession(analyticsRequest);
 
     try {
-      this.logger.log(`Generating response with provider: ${provider}, model: ${selectedModel}`);
-
       // Use Vercel AI SDK to generate text
       const result = await generateText({
         model: selectedProvider(selectedModel),
@@ -130,8 +151,6 @@ export class LLMProxyService {
 
       await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
 
-      this.logger.log(`Successfully generated response. Tokens used: ${result.usage.totalTokens}`);
-
       return response;
     } catch (error) {
       this.logger.error(`Error generating response: ${error.message}`, error.stack);
@@ -149,8 +168,10 @@ export class LLMProxyService {
   }
 
   async *generateStreamingResponse(request: ILLMRequest): AsyncGenerator<ChatCompletionChunkDto, void, unknown> {
-    const { messages, model, provider = "openai", temperature, max_tokens, user } = request;
+    const { messages, model, temperature, max_tokens, user } = request;
     
+    // Auto-detect provider if not specified
+    const provider = request.provider || this.detectProvider(model);
     const selectedProvider = this.getProvider(provider);
     const selectedModel = model || this.getDefaultModel(provider);
 

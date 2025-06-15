@@ -48,7 +48,7 @@ export class LLMProxyController {
       const request: ILLMRequest = {
         messages: requestDto.messages,
         model: requestDto.model,
-        provider: requestDto.provider || "openai",
+        provider: requestDto.provider,
         temperature: requestDto.temperature,
         max_tokens: requestDto.max_tokens,
         user: requestDto.user,
