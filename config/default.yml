@@ -22,4 +22,4 @@ tokenAnalytics:
     baseUrl: "https://cloud.langfuse.com"
 
 http:
-  port: 54011
+  port: 8080

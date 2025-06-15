@@ -1,7 +1,8 @@
-import { IsString, IsOptional, IsNumber, Min, Max, IsArray, ValidateNested } from "class-validator";
+import { IsString, IsOptional, IsNumber, Min, Max, IsArray, ValidateNested, IsBoolean } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 
+// OpenAI API compatible models
 export class MessageDto {
   @ApiProperty({
     description: "Role of the message sender",
@@ -19,7 +20,7 @@ export class MessageDto {
   content: string;
 }
 
-export class LLMRequestDto {
+export class ChatCompletionRequestDto {
   @ApiProperty({
     description: "Array of messages for the conversation",
     type: [MessageDto]
@@ -29,104 +30,162 @@ export class LLMRequestDto {
   @Type(() => MessageDto)
   messages: MessageDto[];
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: "Model to use for generation",
-    example: "gpt-4",
-    default: "gpt-4"
+    example: "gpt-4"
   })
-  @IsOptional()
   @IsString()
-  model?: string = "gpt-4";
+  model: string;
 
   @ApiPropertyOptional({
-    description: "Provider to use for generation",
+    description: "Provider to use for generation (internal use)",
     example: "openai",
     enum: ["openai", "anthropic", "vertex"],
-    default: "openai"
   })
   @IsOptional()
   @IsString()
-  provider?: "openai" | "anthropic" | "vertex" = "openai";
+  provider?: "openai" | "anthropic" | "vertex";
 
   @ApiPropertyOptional({
     description: "Temperature for generation (0.0 to 2.0)",
     example: 0.7,
     minimum: 0,
-    maximum: 2,
-    default: 0.7
+    maximum: 2
   })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(2)
-  temperature?: number = 0.7;
+  temperature?: number;
 
   @ApiPropertyOptional({
     description: "Maximum tokens to generate",
-    example: 1000,
-    default: 1000
+    example: 1000
   })
   @IsOptional()
   @IsNumber()
   @Min(1)
-  maxTokens?: number = 1000;
+  max_tokens?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
+    description: "Whether to stream the response",
+    example: false
+  })
+  @IsOptional()
+  @IsBoolean()
+  stream?: boolean;
+
+  @ApiPropertyOptional({
     description: "User ID for tracking",
     example: "user-123"
   })
+  @IsOptional()
   @IsString()
-  userId: string;
+  user?: string;
 }
 
-export class LLMResponseDto {
+// Response format compatible with OpenAI API
+export class ChatCompletionChoiceDto {
   @ApiProperty({
-    description: "Generated response content",
-    example: "I'm an AI assistant. How can I help you today?"
+    description: "Index of the choice",
+    example: 0
   })
-  content: string;
+  index: number;
 
   @ApiProperty({
-    description: "Model used for generation",
+    description: "Message containing the completion"
+  })
+  message: {
+    role: string;
+    content: string;
+  };
+
+  @ApiProperty({
+    description: "Reason the completion finished",
+    example: "stop"
+  })
+  finish_reason: string;
+}
+
+export class ChatCompletionResponseDto {
+  @ApiProperty({
+    description: "Unique identifier for the completion",
+    example: "chatcmpl-123"
+  })
+  id: string;
+
+  @ApiProperty({
+    description: "Object type",
+    example: "chat.completion"
+  })
+  object: string;
+
+  @ApiProperty({
+    description: "Unix timestamp of when the completion was created"
+  })
+  created: number;
+
+  @ApiProperty({
+    description: "Model used for completion",
     example: "gpt-4"
   })
   model: string;
 
   @ApiProperty({
+    description: "Array of completion choices",
+    type: [ChatCompletionChoiceDto]
+  })
+  choices: ChatCompletionChoiceDto[];
+
+  @ApiProperty({
     description: "Token usage information"
   })
   usage: {
-    totalTokens: number;
-    promptTokens?: number;
-    completionTokens?: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
+}
+
+// Stream response format
+export class ChatCompletionChunkDto {
+  @ApiProperty({
+    description: "Unique identifier for the completion chunk",
+    example: "chatcmpl-123"
+  })
+  id: string;
 
   @ApiProperty({
-    description: "Finish reason",
-    example: "stop"
+    description: "Object type",
+    example: "chat.completion.chunk"
   })
-  finishReason?: string;
-}
+  object: string;
 
-export interface ILLMRequest {
-  messages: Array<{
-    role: "system" | "user" | "assistant";
-    content: string;
+  @ApiProperty({
+    description: "Unix timestamp of when the chunk was created"
+  })
+  created: number;
+
+  @ApiProperty({
+    description: "Model used for completion",
+    example: "gpt-4"
+  })
+  model: string;
+
+  @ApiProperty({
+    description: "Array of completion choices",
+  })
+  choices: Array<{
+    index: number;
+    delta: {
+      content?: string;
+      role?: string;
+    };
+    finish_reason: string | null;
   }>;
-  model: string;
-  provider?: "openai" | "anthropic" | "vertex";
-  temperature: number;
-  maxTokens: number;
-  userId: string;
 }
 
-export interface ILLMResponse {
-  content: string;
-  model: string;
-  usage: {
-    totalTokens: number;
-    promptTokens?: number;
-    completionTokens?: number;
-  };
-  finishReason?: string;
+// Internal interface for service layer (extends ChatCompletionRequestDto)
+export interface ILLMRequest extends ChatCompletionRequestDto {
+  // All properties are inherited from ChatCompletionRequestDto
 }

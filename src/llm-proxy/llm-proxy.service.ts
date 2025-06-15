@@ -4,7 +4,11 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVertex } from "@ai-sdk/google-vertex";
 import { TokenAnalyticsService } from "../token-analytics";
-import { ILLMRequest, ILLMResponse } from "./llm-proxy.models";
+import { 
+  ILLMRequest, 
+  ChatCompletionResponseDto, 
+  ChatCompletionChunkDto 
+} from "./llm-proxy.models";
 import { LLMProxyConfig } from "./llm-proxy.config";
 import { ITokenAnalyticsInputRequest, ITokenAnalyticsInputResponse } from "../token-analytics";
 
@@ -59,8 +63,8 @@ export class LLMProxyService {
     }
   }
 
-  async generateResponse(request: ILLMRequest): Promise<ILLMResponse> {
-    const { messages, model, provider = "openai", temperature, maxTokens, userId } = request;
+  async generateResponse(request: ILLMRequest): Promise<ChatCompletionResponseDto> {
+    const { messages, model, provider = "openai", temperature, max_tokens, user } = request;
     
     const selectedProvider = this.getProvider(provider);
     const selectedModel = model || this.getDefaultModel(provider);
@@ -69,7 +73,7 @@ export class LLMProxyService {
     const analyticsRequest: ITokenAnalyticsInputRequest = {
       traceName: `LLM Generation - ${provider}/${selectedModel}`,
       generationName: "llm-generation",
-      userId,
+      userId: user || "anonymous",
       model: selectedModel,
       input: messages.map(msg => ({
         role: msg.role,
@@ -91,20 +95,28 @@ export class LLMProxyService {
           content: msg.content
         })),
         temperature,
-        maxTokens,
+        maxTokens: max_tokens,
       });
 
-      const usage = {
-        totalTokens: result.usage.totalTokens,
-        promptTokens: result.usage.promptTokens,
-        completionTokens: result.usage.completionTokens,
-      };
-
-      const response: ILLMResponse = {
-        content: result.text,
+      // Format response in OpenAI API format
+      const response: ChatCompletionResponseDto = {
+        id: `chatcmpl-${Date.now()}${Math.random().toString(36).substring(2, 15)}`,
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
         model: selectedModel,
-        usage,
-        finishReason: result.finishReason,
+        choices: [{
+          index: 0,
+          message: {
+            role: "assistant",
+            content: result.text,
+          },
+          finish_reason: result.finishReason || "stop",
+        }],
+        usage: {
+          prompt_tokens: result.usage.promptTokens,
+          completion_tokens: result.usage.completionTokens,
+          total_tokens: result.usage.totalTokens,
+        },
       };
 
       // End analytics session
@@ -113,12 +125,12 @@ export class LLMProxyService {
           content: result.text,
           finishReason: result.finishReason,
         },
-        usage: { totalTokens: usage.totalTokens },
+        usage: { totalTokens: result.usage.totalTokens },
       };
 
       await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
 
-      this.logger.log(`Successfully generated response. Tokens used: ${usage.totalTokens}`);
+      this.logger.log(`Successfully generated response. Tokens used: ${result.usage.totalTokens}`);
 
       return response;
     } catch (error) {
@@ -136,8 +148,8 @@ export class LLMProxyService {
     }
   }
 
-  async *generateStreamingResponse(request: ILLMRequest): AsyncGenerator<string, void, unknown> {
-    const { messages, model, provider = "openai", temperature, maxTokens, userId } = request;
+  async *generateStreamingResponse(request: ILLMRequest): AsyncGenerator<ChatCompletionChunkDto, void, unknown> {
+    const { messages, model, provider = "openai", temperature, max_tokens, user } = request;
     
     const selectedProvider = this.getProvider(provider);
     const selectedModel = model || this.getDefaultModel(provider);
@@ -146,7 +158,7 @@ export class LLMProxyService {
     const analyticsRequest: ITokenAnalyticsInputRequest = {
       traceName: `LLM Streaming - ${provider}/${selectedModel}`,
       generationName: "llm-streaming",
-      userId,
+      userId: user || "anonymous",
       model: selectedModel,
       input: messages.map(msg => ({
         role: msg.role,
@@ -168,16 +180,50 @@ export class LLMProxyService {
           content: msg.content
         })),
         temperature,
-        maxTokens,
+        maxTokens: max_tokens,
       });
 
       let fullContent = '';
       let totalTokens = 0;
+      const chatId = `chatcmpl-${Date.now()}${Math.random().toString(36).substring(2, 15)}`;
+      const created = Math.floor(Date.now() / 1000);
 
       for await (const delta of result.textStream) {
         fullContent += delta;
-        yield delta;
+        
+        // Format chunk in OpenAI API format
+        const chunk: ChatCompletionChunkDto = {
+          id: chatId,
+          object: "chat.completion.chunk",
+          created,
+          model: selectedModel,
+          choices: [{
+            index: 0,
+            delta: {
+              role: "assistant",
+              content: delta,
+            },
+            finish_reason: null,
+          }],
+        };
+        
+        yield chunk;
       }
+
+      // Send final chunk with finish_reason
+      const finalChunk: ChatCompletionChunkDto = {
+        id: chatId,
+        object: "chat.completion.chunk",
+        created,
+        model: selectedModel,
+        choices: [{
+          index: 0,
+          delta: {},
+          finish_reason: "stop",
+        }],
+      };
+      
+      yield finalChunk;
 
       // Get final usage information
       const finalResult = await result.usage;
@@ -197,7 +243,6 @@ export class LLMProxyService {
       await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
 
       this.logger.log(`Successfully completed streaming response. Tokens used: ${totalTokens}`);
-
     } catch (error) {
       this.logger.error(`Error in streaming response: ${error.message}`, error.stack);
       
