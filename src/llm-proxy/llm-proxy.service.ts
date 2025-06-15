@@ -1,9 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { generateText, streamText } from "ai";
+import { generateText, streamText, ToolSet, ToolChoice } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVertex } from "@ai-sdk/google-vertex";
 import { TokenAnalyticsService } from "../token-analytics";
+import type { ChatCompletion } from 'openai/resources/chat/completions';
+import { z } from 'zod';
 import { 
   ILLMRequest, 
   ChatCompletionResponseDto, 
@@ -84,8 +86,118 @@ export class LLMProxyService {
     return 'openai';
   }
 
+  private mapFinishReason(finishReason: string | null): ChatCompletion.Choice['finish_reason'] {
+    if (!finishReason) {
+      return "stop";
+    }
+    switch (finishReason) {
+      case "stop":
+        return "stop";
+      case "length":
+        return "length";
+      case "tool-calls":
+        return "tool_calls";
+      case "content-filter":
+        return "content_filter";
+      case "error":
+      case "other":
+      case "unknown":
+      default:
+        return "stop";
+    }
+  }
+
+  /**
+   * Convert OpenAI tools format to AI SDK format
+   */
+  private convertOpenAIToolsToAISDK(openaiTools: any[]): ToolSet | undefined {
+    if (!openaiTools || openaiTools.length === 0) return undefined;
+    
+    const aiSDKTools: ToolSet = {};
+    
+    for (const tool of openaiTools) {
+      if (tool.type === 'function') {
+        const func = tool.function;
+        
+        // Convert JSON schema to Zod schema
+        const zodSchema = this.jsonSchemaToZod(func.parameters);
+        
+        aiSDKTools[func.name] = {
+          description: func.description,
+          parameters: zodSchema
+        };
+      }
+    }
+    
+    return aiSDKTools;
+  }
+
+  /**
+   * Convert OpenAI tool_choice to AI SDK format
+   */
+  private convertToolChoice(toolChoice: any): ToolChoice<ToolSet> | undefined {
+    if (!toolChoice) return undefined;
+    
+    if (typeof toolChoice === 'string') {
+      if (toolChoice === 'none' || toolChoice === 'auto') {
+        return toolChoice as ToolChoice<ToolSet>;
+      }
+    }
+    
+    if (typeof toolChoice === 'object' && toolChoice.type === 'function') {
+      return {
+        type: 'tool',
+        toolName: toolChoice.function.name
+      };
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Convert JSON schema to Zod schema
+   */
+  private jsonSchemaToZod(jsonSchema: any): z.ZodObject<any> {
+    if (!jsonSchema || !jsonSchema.properties) {
+      return z.object({});
+    }
+
+    const zodShape: Record<string, z.ZodTypeAny> = {};
+    
+    for (const [key, prop] of Object.entries(jsonSchema.properties)) {
+      const property = prop as any;
+      
+      switch (property.type) {
+        case 'string':
+          zodShape[key] = z.string().describe(property.description || '');
+          break;
+        case 'number':
+          zodShape[key] = z.number().describe(property.description || '');
+          break;
+        case 'boolean':
+          zodShape[key] = z.boolean().describe(property.description || '');
+          break;
+        case 'array':
+          zodShape[key] = z.array(z.string()).describe(property.description || '');
+          break;
+        case 'object':
+          zodShape[key] = z.object({}).describe(property.description || '');
+          break;
+        default:
+          zodShape[key] = z.string().describe(property.description || '');
+      }
+      
+      // Make optional if not in required array
+      if (!jsonSchema.required?.includes(key)) {
+        zodShape[key] = zodShape[key].optional();
+      }
+    }
+    
+    return z.object(zodShape);
+  }
+
   async generateResponse(request: ILLMRequest): Promise<ChatCompletionResponseDto> {
-    const { messages, model, temperature, max_tokens, user } = request;
+    const { messages, model, temperature, max_tokens, user, tools, tool_choice } = request;
     
     // Auto-detect provider if not specified
     const provider = request.provider || this.detectProvider(model);
@@ -108,15 +220,20 @@ export class LLMProxyService {
     const { trace, generation } = await this.tokenAnalytics.startSession(analyticsRequest);
 
     try {
+      // Convert OpenAI tools to AI SDK format
+      const aiSDKTools = request.tools ? this.convertOpenAIToolsToAISDK(request.tools) : undefined;
+      
+      // Convert OpenAI tool_choice to AI SDK format
+      const aiSDKToolChoice = request.tool_choice ? this.convertToolChoice(request.tool_choice) : undefined;
+      
       // Use Vercel AI SDK to generate text
       const result = await generateText({
         model: selectedProvider(selectedModel),
-        messages: messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        temperature,
-        maxTokens: max_tokens,
+        messages: request.messages.map((msg: any) => ({ role: msg.role, content: msg.content })),
+        temperature: request.temperature,
+        maxTokens: request.max_tokens,
+        ...(aiSDKTools && { tools: aiSDKTools }),
+        ...(aiSDKToolChoice && { toolChoice: aiSDKToolChoice }),
       });
 
       // Format response in OpenAI API format
@@ -130,14 +247,26 @@ export class LLMProxyService {
           message: {
             role: "assistant",
             content: result.text,
+            refusal: null,
+            tool_calls: result.toolCalls?.map(call => ({
+              id: call.toolCallId,
+              type: "function" as const,
+              function: {
+                name: call.toolName,
+                arguments: JSON.stringify(call.args)
+              }
+            })) || null,
           },
-          finish_reason: result.finishReason || "stop",
+          finish_reason: this.mapFinishReason(result.finishReason),
+          logprobs: null,
         }],
         usage: {
           prompt_tokens: result.usage.promptTokens,
           completion_tokens: result.usage.completionTokens,
           total_tokens: result.usage.totalTokens,
         },
+        system_fingerprint: undefined,
+        service_tier: null,
       };
 
       // End analytics session
@@ -168,7 +297,7 @@ export class LLMProxyService {
   }
 
   async *generateStreamingResponse(request: ILLMRequest): AsyncGenerator<ChatCompletionChunkDto, void, unknown> {
-    const { messages, model, temperature, max_tokens, user } = request;
+    const { messages, model, temperature, max_tokens, user, tools, tool_choice } = request;
     
     // Auto-detect provider if not specified
     const provider = request.provider || this.detectProvider(model);
@@ -193,15 +322,20 @@ export class LLMProxyService {
     try {
       this.logger.log(`Starting streaming response with provider: ${provider}, model: ${selectedModel}`);
 
+      // Convert OpenAI tools to AI SDK format
+      const aiSDKTools = request.tools ? this.convertOpenAIToolsToAISDK(request.tools) : undefined;
+
+      // Convert OpenAI tool_choice to AI SDK format
+      const aiSDKToolChoice = request.tool_choice ? this.convertToolChoice(request.tool_choice) : undefined;
+
       // Use Vercel AI SDK to stream text
       const result = await streamText({
         model: selectedProvider(selectedModel),
-        messages: messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        temperature,
-        maxTokens: max_tokens,
+        messages: request.messages.map((msg: any) => ({ role: msg.role, content: msg.content })),
+        temperature: request.temperature,
+        maxTokens: request.max_tokens,
+        ...(aiSDKTools && { tools: aiSDKTools }),
+        ...(aiSDKToolChoice && { toolChoice: aiSDKToolChoice }),
       });
 
       let fullContent = '';

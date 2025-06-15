@@ -1,11 +1,10 @@
-import { Body, Controller, Post, Res, HttpStatus, Headers, Query } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiResponse, ApiHeader, ApiQuery } from "@nestjs/swagger";
+import { Body, Controller, Get, Post, Query, Res, HttpStatus } from "@nestjs/common";
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
 import { 
   ChatCompletionRequestDto, 
-  ChatCompletionResponseDto,
-  ChatCompletionChunkDto,
+  ChatCompletionResponseSwagger,
   ILLMRequest 
 } from "./llm-proxy.models";
 
@@ -13,6 +12,17 @@ import {
 @Controller("v1/chat")
 export class LLMProxyController {
   constructor(private readonly llmProxyService: LLMProxyService) {}
+
+  @Get("/health")
+  @ApiOperation({ summary: "Health check endpoint" })
+  @ApiResponse({ status: 200, description: "Service is healthy" })
+  healthCheck() {
+    return { 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      service: "llm-proxy"
+    };
+  }
 
   @Post("completions")
   @ApiOperation({
@@ -28,7 +38,7 @@ export class LLMProxyController {
   @ApiResponse({
     status: 200,
     description: "Chat completion created successfully",
-    type: ChatCompletionResponseDto
+    type: ChatCompletionResponseSwagger
   })
   @ApiResponse({
     status: 400,
@@ -52,6 +62,8 @@ export class LLMProxyController {
         temperature: requestDto.temperature,
         max_tokens: requestDto.max_tokens,
         user: requestDto.user,
+        tools: requestDto.tools,
+        tool_choice: requestDto.tool_choice,
         stream: stream
       };
 
@@ -68,7 +80,7 @@ export class LLMProxyController {
           
           // Stream each chunk in OpenAI format
           for await (const chunk of streamGenerator) {
-            const formattedChunk = `data: ${chunk}\n\n`;
+            const formattedChunk = `data: ${JSON.stringify(chunk)}\n\n`;
             res.write(formattedChunk);
           }
           

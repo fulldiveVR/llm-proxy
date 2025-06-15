@@ -1,6 +1,13 @@
 import { IsString, IsOptional, IsNumber, Min, Max, IsArray, ValidateNested, IsBoolean } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
+import type { 
+  ChatCompletion, 
+  ChatCompletionChunk, 
+  ChatCompletionMessage,
+  ChatCompletionTool,
+  ChatCompletionToolChoiceOption
+} from 'openai/resources/chat/completions';
 
 // OpenAI API compatible models
 export class MessageDto {
@@ -82,32 +89,34 @@ export class ChatCompletionRequestDto {
   @IsOptional()
   @IsString()
   user?: string;
+
+  @ApiPropertyOptional({
+    description: "Tools available for the model to call",
+    type: "array",
+    items: {
+      type: "object"
+    }
+  })
+  @IsOptional()
+  tools?: ChatCompletionTool[];
+
+  @ApiPropertyOptional({
+    description: "Controls which (if any) tool is called by the model",
+    oneOf: [
+      { type: "string", enum: ["none", "auto"] },
+      { type: "object" }
+    ]
+  })
+  @IsOptional()
+  tool_choice?: ChatCompletionToolChoiceOption;
 }
 
-// Response format compatible with OpenAI API
-export class ChatCompletionChoiceDto {
-  @ApiProperty({
-    description: "Index of the choice",
-    example: 0
-  })
-  index: number;
+// Use official OpenAI types for responses
+export type ChatCompletionResponseDto = ChatCompletion;
+export type ChatCompletionChunkDto = ChatCompletionChunk;
 
-  @ApiProperty({
-    description: "Message containing the completion"
-  })
-  message: {
-    role: string;
-    content: string;
-  };
-
-  @ApiProperty({
-    description: "Reason the completion finished",
-    example: "stop"
-  })
-  finish_reason: string;
-}
-
-export class ChatCompletionResponseDto {
+// Swagger-compatible class that implements OpenAI interface
+export class ChatCompletionResponseSwagger implements ChatCompletion {
   @ApiProperty({
     description: "Unique identifier for the completion",
     example: "chatcmpl-123"
@@ -118,7 +127,7 @@ export class ChatCompletionResponseDto {
     description: "Object type",
     example: "chat.completion"
   })
-  object: string;
+  object: "chat.completion";
 
   @ApiProperty({
     description: "Unix timestamp of when the completion was created"
@@ -132,60 +141,35 @@ export class ChatCompletionResponseDto {
   model: string;
 
   @ApiProperty({
-    description: "Array of completion choices",
-    type: [ChatCompletionChoiceDto]
+    description: "Array of completion choices"
   })
-  choices: ChatCompletionChoiceDto[];
+  choices: ChatCompletion.Choice[];
 
   @ApiProperty({
-    description: "Token usage information"
+    description: "Token usage information",
+    required: false
   })
-  usage: {
-    prompt_tokens: number;
+  usage?: {
     completion_tokens: number;
+    prompt_tokens: number;
     total_tokens: number;
   };
-}
-
-// Stream response format
-export class ChatCompletionChunkDto {
-  @ApiProperty({
-    description: "Unique identifier for the completion chunk",
-    example: "chatcmpl-123"
-  })
-  id: string;
 
   @ApiProperty({
-    description: "Object type",
-    example: "chat.completion.chunk"
+    description: "System fingerprint",
+    required: false
   })
-  object: string;
+  system_fingerprint?: string;
 
   @ApiProperty({
-    description: "Unix timestamp of when the chunk was created"
+    description: "Service tier used",
+    required: false
   })
-  created: number;
-
-  @ApiProperty({
-    description: "Model used for completion",
-    example: "gpt-4"
-  })
-  model: string;
-
-  @ApiProperty({
-    description: "Array of completion choices",
-  })
-  choices: Array<{
-    index: number;
-    delta: {
-      content?: string;
-      role?: string;
-    };
-    finish_reason: string | null;
-  }>;
+  service_tier?: "auto" | "default" | "flex" | null;
 }
 
 // Internal interface for service layer (extends ChatCompletionRequestDto)
 export interface ILLMRequest extends ChatCompletionRequestDto {
-  // All properties are inherited from ChatCompletionRequestDto
+  provider?: "openai" | "anthropic" | "vertex";
+  stream?: boolean;
 }
