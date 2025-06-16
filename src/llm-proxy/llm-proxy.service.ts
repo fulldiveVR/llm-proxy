@@ -4,8 +4,6 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVertex } from "@ai-sdk/google-vertex";
 import { TokenAnalyticsService } from "../token-analytics";
-import type { ChatCompletion } from 'openai/resources/chat/completions';
-import { z } from 'zod';
 import { 
   ILLMRequest, 
   ChatCompletionResponseDto, 
@@ -15,6 +13,15 @@ import {
 } from "./llm-proxy.models";
 import { LLMProxyConfig } from "./llm-proxy.config";
 import { ITokenAnalyticsInputRequest, ITokenAnalyticsInputResponse } from "../token-analytics";
+import { 
+  convertOpenAIMessagesToAISDK, 
+  convertAISDKResultToOpenAI, 
+  convertAISDKChunkToOpenAI, 
+  generateChatCompletionId,
+  mapFinishReason,
+  convertOpenAIToolsToAISDK,
+  convertOpenAIToolChoiceToAISDK
+} from "../utils";
 
 @Injectable()
 export class LLMProxyService {
@@ -88,222 +95,6 @@ export class LLMProxyService {
     return 'openai';
   }
 
-  private mapFinishReason(finishReason: string | null): ChatCompletion.Choice['finish_reason'] {
-    if (!finishReason) {
-      return "stop";
-    }
-    switch (finishReason) {
-      case "stop":
-        return "stop";
-      case "length":
-        return "length";
-      case "tool-calls":
-        return "tool_calls";
-      case "content-filter":
-        return "content_filter";
-      case "error":
-      case "other":
-      case "unknown":
-      default:
-        return "stop";
-    }
-  }
-
-  /**
-   * Convert OpenAI tools format to AI SDK format
-   */
-  private convertOpenAIToolsToAISDK(openaiTools: any[]): ToolSet | undefined {
-    if (!openaiTools || openaiTools.length === 0) return undefined;
-    
-    const aiSDKTools: ToolSet = {};
-    
-    for (const tool of openaiTools) {
-      if (tool.type === 'function') {
-        const func = tool.function;
-        
-        // Convert JSON schema to Zod schema
-        const zodSchema = this.jsonSchemaToZod(func.parameters);
-        
-        aiSDKTools[func.name] = {
-          description: func.description,
-          parameters: zodSchema
-        };
-      }
-    }
-    
-    return aiSDKTools;
-  }
-
-  /**
-   * Convert OpenAI tool_choice to AI SDK format
-   */
-  private convertToolChoice(toolChoice: any): ToolChoice<ToolSet> | undefined {
-    if (!toolChoice) return undefined;
-    
-    if (typeof toolChoice === 'string') {
-      if (toolChoice === 'none' || toolChoice === 'auto') {
-        return toolChoice as ToolChoice<ToolSet>;
-      }
-    }
-    
-    if (typeof toolChoice === 'object' && toolChoice.type === 'function') {
-      return {
-        type: 'tool',
-        toolName: toolChoice.function.name
-      };
-    }
-    
-    return undefined;
-  }
-
-  /**
-   * Extract text content from OpenAI message content
-   */
-  private extractTextContent(content: ChatMessageContent): string {
-    if (typeof content === 'string') {
-      return content;
-    }
-    
-    if (Array.isArray(content)) {
-      return content
-        .filter((part: any) => part.type === 'text')
-        .map((part: any) => {
-          const text = part.text;
-          return Array.isArray(text) ? text.join('\n') : (text || '');
-        })
-        .join('\n');
-    }
-    
-    return '';
-  }
-
-  /**
-   * Convert OpenAI messages to AI SDK format with proper tool handling
-   */
-  private convertMessagesToAISDK(messages: MessageDto[]): CoreMessage[] {
-    const result: CoreMessage[] = [];
-    
-    for (const msg of messages) {
-      // Handle assistant messages with tool calls
-      if (msg.role === 'assistant' && msg.tool_calls) {
-        result.push({
-          role: 'assistant',
-          content: msg.tool_calls.map((call: any) => ({
-            type: 'tool-call',
-            toolCallId: call.id,
-            toolName: call.function.name,
-            args: JSON.parse(call.function.arguments)
-          }))
-        });
-        continue;
-      }
-      
-      // Handle tool messages
-      if (msg.role === 'tool' && msg.tool_call_id) {
-        const toolResult = this.extractTextContent(msg.content);
-        result.push({
-          role: 'tool',
-          content: [{
-            type: 'tool-result',
-            toolCallId: msg.tool_call_id,
-            toolName: msg.name || 'unknown',
-            result: toolResult
-          }]
-        });
-        continue;
-      }
-      
-      // Handle system messages (must be string)
-      if (msg.role === 'system') {
-        const textContent = this.extractTextContent(msg.content);
-        result.push({ role: 'system', content: textContent });
-        continue;
-      }
-      
-      // Handle user messages (can be string or content array)
-      if (msg.role === 'user') {
-        if (typeof msg.content === 'string') {
-          result.push({ role: 'user', content: msg.content });
-        } else if (Array.isArray(msg.content)) {
-          // Convert to AI SDK format for multimodal content
-          const aiSDKContent = msg.content.map((part: any) => {
-            if (part.type === 'text') {
-              return { type: 'text', text: part.text };
-            } else if (part.type === 'image_url') {
-              return { type: 'image', image: part.image_url.url };
-            }
-            return part; // fallback
-          });
-          result.push({ role: 'user', content: aiSDKContent });
-        }
-        continue;
-      }
-      
-      // Handle regular assistant messages (string content)
-      if (msg.role === 'assistant') {
-        const textContent = this.extractTextContent(msg.content);
-        // Convert empty arrays to empty strings for assistant messages
-        result.push({ 
-          role: 'assistant', 
-          content: textContent || '' 
-        });
-        continue;
-      }
-      
-      // Skip function messages and other unsupported roles
-      if (msg.role === 'function') {
-        console.warn('Skipping function message - deprecated in favor of tool messages');
-        continue;
-      }
-      
-      console.warn(`Skipping message with unsupported role: ${msg.role}`);
-    }
-    
-    return result;
-  }
-
-  /**
-   * Convert JSON schema to Zod schema
-   */
-  private jsonSchemaToZod(jsonSchema: any): z.ZodObject<any> {
-    if (!jsonSchema || !jsonSchema.properties) {
-      return z.object({});
-    }
-
-    const zodShape: Record<string, z.ZodTypeAny> = {};
-    
-    for (const [key, prop] of Object.entries(jsonSchema.properties)) {
-      const property = prop as any;
-      
-      switch (property.type) {
-        case 'string':
-          zodShape[key] = z.string().describe(property.description || '');
-          break;
-        case 'number':
-          zodShape[key] = z.number().describe(property.description || '');
-          break;
-        case 'boolean':
-          zodShape[key] = z.boolean().describe(property.description || '');
-          break;
-        case 'array':
-          zodShape[key] = z.array(z.string()).describe(property.description || '');
-          break;
-        case 'object':
-          zodShape[key] = z.object({}).describe(property.description || '');
-          break;
-        default:
-          zodShape[key] = z.string().describe(property.description || '');
-      }
-      
-      // Make optional if not in required array
-      if (!jsonSchema.required?.includes(key)) {
-        zodShape[key] = zodShape[key].optional();
-      }
-    }
-    
-    return z.object(zodShape);
-  }
-
   async generateResponse(request: ILLMRequest): Promise<ChatCompletionResponseDto> {
     const { messages, model, temperature, max_tokens, user, tools, tool_choice } = request;
     
@@ -329,13 +120,13 @@ export class LLMProxyService {
 
     try {
       // Convert OpenAI tools to AI SDK format
-      const aiSDKTools = request.tools ? this.convertOpenAIToolsToAISDK(request.tools) : undefined;
+      const aiSDKTools = request.tools ? convertOpenAIToolsToAISDK(request.tools) : undefined;
       
       // Convert OpenAI tool_choice to AI SDK format
-      const aiSDKToolChoice = request.tool_choice ? this.convertToolChoice(request.tool_choice) : undefined;
+      const aiSDKToolChoice = request.tool_choice ? convertOpenAIToolChoiceToAISDK(request.tool_choice) : undefined;
       
       // Convert messages to AI SDK format
-      const aiSDKMessages = this.convertMessagesToAISDK(request.messages);
+      const aiSDKMessages = convertOpenAIMessagesToAISDK(request.messages);
       
       // Use Vercel AI SDK to generate text
       const result = await generateText({
@@ -348,43 +139,13 @@ export class LLMProxyService {
       });
 
       // Format response in OpenAI API format
-      const response: ChatCompletionResponseDto = {
-        id: `chatcmpl-${Date.now()}${Math.random().toString(36).substring(2, 15)}`,
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: selectedModel,
-        choices: [{
-          index: 0,
-          message: {
-            role: "assistant",
-            content: result.text,
-            refusal: null,
-            tool_calls: result.toolCalls?.map(call => ({
-              id: call.toolCallId,
-              type: "function" as const,
-              function: {
-                name: call.toolName,
-                arguments: JSON.stringify(call.args)
-              }
-            })) || null,
-          },
-          finish_reason: this.mapFinishReason(result.finishReason),
-          logprobs: null,
-        }],
-        usage: {
-          prompt_tokens: result.usage.promptTokens,
-          completion_tokens: result.usage.completionTokens,
-          total_tokens: result.usage.totalTokens,
-        },
-        system_fingerprint: undefined,
-        service_tier: null,
-      };
+      const response = convertAISDKResultToOpenAI(result, selectedModel);
 
       // End analytics session
       const analyticsResponse: ITokenAnalyticsInputResponse = {
         output: {
           content: result.text,
-          finishReason: result.finishReason,
+          finishReason: mapFinishReason(result.finishReason),
         },
         usage: { totalTokens: result.usage.totalTokens },
       };
@@ -434,13 +195,13 @@ export class LLMProxyService {
       this.logger.log(`Starting streaming response with provider: ${provider}, model: ${selectedModel}`);
 
       // Convert OpenAI tools to AI SDK format
-      const aiSDKTools = request.tools ? this.convertOpenAIToolsToAISDK(request.tools) : undefined;
+      const aiSDKTools = request.tools ? convertOpenAIToolsToAISDK(request.tools) : undefined;
 
       // Convert OpenAI tool_choice to AI SDK format
-      const aiSDKToolChoice = request.tool_choice ? this.convertToolChoice(request.tool_choice) : undefined;
+      const aiSDKToolChoice = request.tool_choice ? convertOpenAIToolChoiceToAISDK(request.tool_choice) : undefined;
 
       // Convert messages to AI SDK format
-      const aiSDKMessages = this.convertMessagesToAISDK(request.messages);
+      const aiSDKMessages = convertOpenAIMessagesToAISDK(request.messages);
       
       // Use Vercel AI SDK to stream text
       const result = await streamText({
@@ -454,43 +215,20 @@ export class LLMProxyService {
 
       let fullContent = '';
       let totalTokens = 0;
-      const chatId = `chatcmpl-${Date.now()}${Math.random().toString(36).substring(2, 15)}`;
+      const chatId = generateChatCompletionId();
       const created = Math.floor(Date.now() / 1000);
 
       for await (const delta of result.textStream) {
         fullContent += delta;
         
         // Format chunk in OpenAI API format
-        const chunk: ChatCompletionChunkDto = {
-          id: chatId,
-          object: "chat.completion.chunk",
-          created,
-          model: selectedModel,
-          choices: [{
-            index: 0,
-            delta: {
-              role: "assistant",
-              content: delta,
-            },
-            finish_reason: null,
-          }],
-        };
+        const chunk = convertAISDKChunkToOpenAI(delta, chatId, created, selectedModel);
         
         yield chunk;
       }
 
       // Send final chunk with finish_reason
-      const finalChunk: ChatCompletionChunkDto = {
-        id: chatId,
-        object: "chat.completion.chunk",
-        created,
-        model: selectedModel,
-        choices: [{
-          index: 0,
-          delta: {},
-          finish_reason: "stop",
-        }],
-      };
+      const finalChunk = convertAISDKChunkToOpenAI('', chatId, created, selectedModel, "stop");
       
       yield finalChunk;
 
