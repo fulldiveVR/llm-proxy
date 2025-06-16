@@ -1,3 +1,5 @@
+import { ChatMessageContent } from "../llm-proxy";
+
 export interface ITokenAnalyticsInputRequest {
   traceName: string;
   generationName: string;
@@ -14,7 +16,7 @@ export interface ITokenAnalyticsInputResponse {
 
 export interface IRequestMessage {
   role: string;
-  content: string;
+  content: ChatMessageContent;
 }
 
 export interface ITraceInputData {

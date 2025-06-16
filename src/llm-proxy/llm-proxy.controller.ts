@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Res, HttpStatus } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger } from "@nestjs/common";
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
@@ -11,7 +11,11 @@ import {
 @ApiTags("OpenAI API Compatible")
 @Controller("v1/chat")
 export class LLMProxyController {
-  constructor(private readonly llmProxyService: LLMProxyService) {}
+  private readonly logger: Logger;
+
+  constructor(private readonly llmProxyService: LLMProxyService) {
+    this.logger = new Logger(LLMProxyController.name);
+  }
 
   @Get("/health")
   @ApiOperation({ summary: "Health check endpoint" })
@@ -29,12 +33,6 @@ export class LLMProxyController {
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
   })
-  @ApiQuery({
-    name: "stream",
-    description: "Whether to stream the response",
-    required: false,
-    type: Boolean
-  })
   @ApiResponse({
     status: 200,
     description: "Chat completion created successfully",
@@ -50,10 +48,14 @@ export class LLMProxyController {
   })
   async createChatCompletion(
     @Body() requestDto: ChatCompletionRequestDto,
-    @Query("stream") stream: boolean,
     @Res() res: Response
   ): Promise<void> {
     try {
+      const isStreaming = requestDto.stream || false;
+      
+      // Log incoming request
+      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${requestDto.provider || 'auto'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}`);
+      
       // Prepare request for the service
       const request: ILLMRequest = {
         messages: requestDto.messages,
@@ -64,11 +66,11 @@ export class LLMProxyController {
         user: requestDto.user,
         tools: requestDto.tools,
         tool_choice: requestDto.tool_choice,
-        stream: stream
+        stream: requestDto.stream
       };
 
       // Handle streaming response
-      if (stream) {
+      if (isStreaming) {
         // Set headers for Server-Sent Events
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");

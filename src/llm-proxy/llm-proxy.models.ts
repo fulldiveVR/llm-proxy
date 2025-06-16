@@ -5,26 +5,57 @@ import type {
   ChatCompletion, 
   ChatCompletionChunk, 
   ChatCompletionMessage,
+  ChatCompletionMessageToolCall,
   ChatCompletionTool,
   ChatCompletionToolChoiceOption
 } from 'openai/resources/chat/completions';
+
+// OpenAI API compatible types
+export type ChatMessageContentItem = 
+  | { type: "text"; text: string } 
+  | { type: "image_url"; image_url: { url: string } };
+
+export type ChatMessageContent = string | ChatMessageContentItem[];
 
 // OpenAI API compatible models
 export class MessageDto {
   @ApiProperty({
     description: "Role of the message sender",
     example: "user",
-    enum: ["system", "user", "assistant"]
+    enum: ["system", "user", "assistant", "tool", "function"]
   })
   @IsString()
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool" | "function";
 
   @ApiProperty({
-    description: "Content of the message",
-    example: "Hello, how can I help you today?"
+    description: "Content of the message - can be a string or array of content parts for multimodal inputs",
+    example: "Hello, how can I help you today?",
+    oneOf: [
+      { type: "string" },
+      { 
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["text", "image_url"] },
+            text: { type: "string" },
+            image_url: { 
+              type: "object",
+              properties: {
+                url: { type: "string" }
+              }
+            }
+          }
+        }
+      }
+    ]
   })
-  @IsString()
-  content: string;
+  content: ChatMessageContent;
+
+  tool_calls?: Array<ChatCompletionMessageToolCall>;
+
+  tool_call_id: string
+  name: string
 }
 
 export class ChatCompletionRequestDto {

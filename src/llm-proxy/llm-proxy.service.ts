@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { generateText, streamText, ToolSet, ToolChoice } from "ai";
+import { generateText, streamText, ToolSet, ToolChoice, CoreMessage } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVertex } from "@ai-sdk/google-vertex";
@@ -9,7 +9,9 @@ import { z } from 'zod';
 import { 
   ILLMRequest, 
   ChatCompletionResponseDto, 
-  ChatCompletionChunkDto 
+  ChatCompletionChunkDto, 
+  MessageDto,
+  ChatMessageContent
 } from "./llm-proxy.models";
 import { LLMProxyConfig } from "./llm-proxy.config";
 import { ITokenAnalyticsInputRequest, ITokenAnalyticsInputResponse } from "../token-analytics";
@@ -155,6 +157,112 @@ export class LLMProxyService {
   }
 
   /**
+   * Extract text content from OpenAI message content
+   */
+  private extractTextContent(content: ChatMessageContent): string {
+    if (typeof content === 'string') {
+      return content;
+    }
+    
+    if (Array.isArray(content)) {
+      return content
+        .filter((part: any) => part.type === 'text')
+        .map((part: any) => {
+          const text = part.text;
+          return Array.isArray(text) ? text.join('\n') : (text || '');
+        })
+        .join('\n');
+    }
+    
+    return '';
+  }
+
+  /**
+   * Convert OpenAI messages to AI SDK format with proper tool handling
+   */
+  private convertMessagesToAISDK(messages: MessageDto[]): CoreMessage[] {
+    const result: CoreMessage[] = [];
+    
+    for (const msg of messages) {
+      // Handle assistant messages with tool calls
+      if (msg.role === 'assistant' && msg.tool_calls) {
+        result.push({
+          role: 'assistant',
+          content: msg.tool_calls.map((call: any) => ({
+            type: 'tool-call',
+            toolCallId: call.id,
+            toolName: call.function.name,
+            args: JSON.parse(call.function.arguments)
+          }))
+        });
+        continue;
+      }
+      
+      // Handle tool messages
+      if (msg.role === 'tool' && msg.tool_call_id) {
+        const toolResult = this.extractTextContent(msg.content);
+        result.push({
+          role: 'tool',
+          content: [{
+            type: 'tool-result',
+            toolCallId: msg.tool_call_id,
+            toolName: msg.name || 'unknown',
+            result: toolResult
+          }]
+        });
+        continue;
+      }
+      
+      // Handle system messages (must be string)
+      if (msg.role === 'system') {
+        const textContent = this.extractTextContent(msg.content);
+        result.push({ role: 'system', content: textContent });
+        continue;
+      }
+      
+      // Handle user messages (can be string or content array)
+      if (msg.role === 'user') {
+        if (typeof msg.content === 'string') {
+          result.push({ role: 'user', content: msg.content });
+        } else if (Array.isArray(msg.content)) {
+          // Convert to AI SDK format for multimodal content
+          const aiSDKContent = msg.content.map((part: any) => {
+            if (part.type === 'text') {
+              return { type: 'text', text: part.text };
+            } else if (part.type === 'image_url') {
+              return { type: 'image', image: part.image_url.url };
+            }
+            return part; // fallback
+          });
+          result.push({ role: 'user', content: aiSDKContent });
+        }
+        continue;
+      }
+      
+      // Handle regular assistant messages (string content)
+      if (msg.role === 'assistant') {
+        const textContent = this.extractTextContent(msg.content);
+        // Convert empty arrays to empty strings for assistant messages
+        result.push({ 
+          role: 'assistant', 
+          content: textContent || '' 
+        });
+        continue;
+      }
+      
+      // Skip function messages and other unsupported roles
+      if (msg.role === 'function') {
+        console.warn('Skipping function message - deprecated in favor of tool messages');
+        continue;
+      }
+      
+      console.warn(`Skipping message with unsupported role: ${msg.role}`);
+    }
+    
+    return result;
+  }
+
+  /**
    * Convert JSON schema to Zod schema
    */
   private jsonSchemaToZod(jsonSchema: any): z.ZodObject<any> {
@@ -226,10 +334,13 @@ export class LLMProxyService {
       // Convert OpenAI tool_choice to AI SDK format
       const aiSDKToolChoice = request.tool_choice ? this.convertToolChoice(request.tool_choice) : undefined;
       
+      // Convert messages to AI SDK format
+      const aiSDKMessages = this.convertMessagesToAISDK(request.messages);
+      
       // Use Vercel AI SDK to generate text
       const result = await generateText({
         model: selectedProvider(selectedModel),
-        messages: request.messages.map((msg: any) => ({ role: msg.role, content: msg.content })),
+        messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
         ...(aiSDKTools && { tools: aiSDKTools }),
@@ -282,7 +393,7 @@ export class LLMProxyService {
 
       return response;
     } catch (error) {
-      this.logger.error(`Error generating response: ${error.message}`, error.stack);
+      this.logger.error(`Error generating response: ${error.message}`);
       
       // End analytics session with error
       const analyticsResponse: ITokenAnalyticsInputResponse = {
@@ -328,10 +439,13 @@ export class LLMProxyService {
       // Convert OpenAI tool_choice to AI SDK format
       const aiSDKToolChoice = request.tool_choice ? this.convertToolChoice(request.tool_choice) : undefined;
 
+      // Convert messages to AI SDK format
+      const aiSDKMessages = this.convertMessagesToAISDK(request.messages);
+      
       // Use Vercel AI SDK to stream text
       const result = await streamText({
         model: selectedProvider(selectedModel),
-        messages: request.messages.map((msg: any) => ({ role: msg.role, content: msg.content })),
+        messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
         ...(aiSDKTools && { tools: aiSDKTools }),
