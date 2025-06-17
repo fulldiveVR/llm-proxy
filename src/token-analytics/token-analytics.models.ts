@@ -11,7 +11,7 @@ export interface ITokenAnalyticsInputRequest {
 
 export interface ITokenAnalyticsInputResponse {
   output: any;
-  usage: { totalTokens: number; };
+  usage: { input: number; output: number; total: number; };
 }
 
 export interface IRequestMessage {
@@ -42,7 +42,7 @@ export interface IGenerationInputData {
 
 export interface IGenerationOutputData {
   output: any;
-  usage: { totalTokens: number; };
+  usage: { input: number; output: number; total: number; };
 }
 
 export interface ITokenAnalyticsParser {

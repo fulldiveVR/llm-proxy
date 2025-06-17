@@ -54,7 +54,7 @@ export class LLMProxyController {
       const isStreaming = requestDto.stream || false;
       
       // Log incoming request
-      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${requestDto.provider || 'auto'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}`);
+      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${requestDto.provider || 'auto'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}`);
       
       // Prepare request for the service
       const request: ILLMRequest = {

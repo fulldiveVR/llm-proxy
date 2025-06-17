@@ -6,16 +6,13 @@ llmProxy:
   openai:
     apiKey: OPENAI_API_KEY
     defaultModel: OPENAI_MODEL
-    maxTokens: OPENAI_MAX_TOKENS
   anthropic:
     apiKey: ANTHROPIC_API_KEY
-    defaultModel: ANTHROPIC_MODEL
-    maxTokens: ANTHROPIC_MAX_TOKENS
   vertex:
     projectId: VERTEX_PROJECT_ID
     location: VERTEX_LOCATION
-    defaultModel: VERTEX_MODEL
-    maxTokens: VERTEX_MAX_TOKENS
+    clientEmail: VERTEX_CLIENT_EMAIL
+    privateKey: VERTEX_PRIVATE_KEY
 
 tokenAnalytics:
   langfuse:

@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, Logger } from "@nestjs/common";
 import Langfuse from "langfuse";
 import { TokenAnalyticsService } from "./token-analytics.service";
 import { TokenAnalyticsParser } from "./token-analytics.parser";
@@ -14,10 +14,12 @@ import { TokenAnalyticsConfig } from "./token-analytics.config";
     {
       provide: Langfuse,
       useFactory: (config: TokenAnalyticsConfig) => {
+        const langfuseConfig = config.langfuse;
+        
         return new Langfuse({
-          secretKey: config.langfuse.secretKey,
-          publicKey: config.langfuse.publicKey,
-          baseUrl: config.langfuse.baseUrl,
+          secretKey: langfuseConfig.secretKey,
+          publicKey: langfuseConfig.publicKey,
+          baseUrl: langfuseConfig.baseUrl,
         });
       },
       inject: [TokenAnalyticsConfig],

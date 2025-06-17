@@ -3,17 +3,13 @@ env: development
 llmProxy:
   openai:
     apiKey: "your-openai-api-key"
-    defaultModel: "gpt-4"
-    maxTokens: 2048
   anthropic:
     apiKey: "your-anthropic-api-key"
-    defaultModel: "claude-3-5-sonnet-20241022"
-    maxTokens: 2048
   vertex:
     projectId: "your-gcp-project-id"
     location: "us-central1"
-    defaultModel: "gemini-1.5-pro"
-    maxTokens: 2048
+    clientEmail: "your-gcp-client-email"
+    privateKey: "your-gcp-private-key"
 
 tokenAnalytics:
   langfuse:

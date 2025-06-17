@@ -46,6 +46,12 @@ export class LLMProxyService {
     this.vertexProvider = createVertex({
       project: this.config.vertex.projectId,
       location: this.config.vertex.location,
+      googleAuthOptions: {
+        credentials: {
+          client_email: this.config.vertex.clientEmail,
+          private_key: this.config.vertex.privateKey,
+        }
+      }
     });
   }
 
@@ -59,19 +65,6 @@ export class LLMProxyService {
         return this.vertexProvider;
       default:
         return this.openaiProvider;
-    }
-  }
-
-  private getDefaultModel(provider: "openai" | "anthropic" | "vertex" = "openai"): string {
-    switch (provider) {
-      case "openai":
-        return this.config.openai.defaultModel;
-      case "anthropic":
-        return this.config.anthropic.defaultModel;
-      case "vertex":
-        return this.config.vertex.defaultModel;
-      default:
-        return this.config.openai.defaultModel;
     }
   }
 
@@ -101,14 +94,13 @@ export class LLMProxyService {
     // Auto-detect provider if not specified
     const provider = request.provider || this.detectProvider(model);
     const selectedProvider = this.getProvider(provider);
-    const selectedModel = model || this.getDefaultModel(provider);
 
     // Start analytics session
     const analyticsRequest: ITokenAnalyticsInputRequest = {
-      traceName: `LLM Generation - ${provider}/${selectedModel}`,
+      traceName: `LLM Generation - ${provider}/${model}`,
       generationName: "llm-generation",
       userId: user || "anonymous",
-      model: selectedModel,
+      model: model,
       input: messages.map(msg => ({
         role: msg.role,
         content: msg.content
@@ -130,7 +122,7 @@ export class LLMProxyService {
       
       // Use Vercel AI SDK to generate text
       const result = await generateText({
-        model: selectedProvider(selectedModel),
+        model: selectedProvider(model),
         messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
@@ -139,7 +131,7 @@ export class LLMProxyService {
       });
 
       // Format response in OpenAI API format
-      const response = convertAISDKResultToOpenAI(result, selectedModel);
+      const response = convertAISDKResultToOpenAI(result, model);
 
       // End analytics session
       const analyticsResponse: ITokenAnalyticsInputResponse = {
@@ -147,7 +139,7 @@ export class LLMProxyService {
           content: result.text,
           finishReason: mapFinishReason(result.finishReason),
         },
-        usage: { totalTokens: result.usage.totalTokens },
+        usage: { input: result.usage.promptTokens, output: result.usage.completionTokens, total: result.usage.totalTokens },
       };
 
       await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
@@ -159,7 +151,7 @@ export class LLMProxyService {
       // End analytics session with error
       const analyticsResponse: ITokenAnalyticsInputResponse = {
         output: { error: error.message },
-        usage: { totalTokens: 0 },
+        usage: { input: 0, output: 0, total: 0 },
       };
 
       await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
@@ -169,19 +161,18 @@ export class LLMProxyService {
   }
 
   async *generateStreamingResponse(request: ILLMRequest): AsyncGenerator<ChatCompletionChunkDto, void, unknown> {
-    const { messages, model, temperature, max_tokens, user, tools, tool_choice } = request;
+    const { messages, model, temperature, user } = request;
     
     // Auto-detect provider if not specified
     const provider = request.provider || this.detectProvider(model);
     const selectedProvider = this.getProvider(provider);
-    const selectedModel = model || this.getDefaultModel(provider);
 
     // Start analytics session
     const analyticsRequest: ITokenAnalyticsInputRequest = {
-      traceName: `LLM Streaming - ${provider}/${selectedModel}`,
+      traceName: `LLM Streaming - ${provider}/${model}`,
       generationName: "llm-streaming",
       userId: user || "anonymous",
-      model: selectedModel,
+      model: model,
       input: messages.map(msg => ({
         role: msg.role,
         content: msg.content
@@ -192,7 +183,7 @@ export class LLMProxyService {
     const { trace, generation } = await this.tokenAnalytics.startSession(analyticsRequest);
 
     try {
-      this.logger.log(`Starting streaming response with provider: ${provider}, model: ${selectedModel}`);
+      this.logger.log(`Starting streaming response with provider: ${provider}, model: ${model}`);
 
       // Convert OpenAI tools to AI SDK format
       const aiSDKTools = request.tools ? convertOpenAIToolsToAISDK(request.tools) : undefined;
@@ -205,7 +196,7 @@ export class LLMProxyService {
       
       // Use Vercel AI SDK to stream text
       const result = await streamText({
-        model: selectedProvider(selectedModel),
+        model: selectedProvider(model),
         messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
@@ -214,6 +205,8 @@ export class LLMProxyService {
       });
 
       let fullContent = '';
+      let inputTokens = 0;
+      let outputTokens = 0;
       let totalTokens = 0;
       const chatId = generateChatCompletionId();
       const created = Math.floor(Date.now() / 1000);
@@ -222,19 +215,21 @@ export class LLMProxyService {
         fullContent += delta;
         
         // Format chunk in OpenAI API format
-        const chunk = convertAISDKChunkToOpenAI(delta, chatId, created, selectedModel);
+        const chunk = convertAISDKChunkToOpenAI(delta, chatId, created, model);
         
         yield chunk;
       }
 
       // Send final chunk with finish_reason
-      const finalChunk = convertAISDKChunkToOpenAI('', chatId, created, selectedModel, "stop");
+      const finalChunk = convertAISDKChunkToOpenAI('', chatId, created, model, "stop");
       
       yield finalChunk;
 
       // Get final usage information
       const finalResult = await result.usage;
       if (finalResult) {
+        inputTokens = finalResult.promptTokens;
+        outputTokens = finalResult.completionTokens;
         totalTokens = finalResult.totalTokens;
       }
 
@@ -244,7 +239,7 @@ export class LLMProxyService {
           content: fullContent,
           streaming: true,
         },
-        usage: { totalTokens },
+        usage: { input: inputTokens, output: outputTokens, total: totalTokens },
       };
 
       await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
@@ -256,7 +251,7 @@ export class LLMProxyService {
       // End analytics session with error
       const analyticsResponse: ITokenAnalyticsInputResponse = {
         output: { error: error.message },
-        usage: { totalTokens: 0 },
+        usage: { input: 0, output: 0, total: 0 },
       };
 
       await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
