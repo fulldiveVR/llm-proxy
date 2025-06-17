@@ -4,11 +4,16 @@ import { IConfig } from "./infrastructure"
 import { AllExceptionsFilter } from "./lib"
 import { INestApplication, ValidationPipe, VersioningType } from "@nestjs/common"
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
+import * as express from "express"
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule)
   const config = await app.resolve(IConfig)
   const port = config.get<number>("http.port")
+
+  // Increase payload size limit
+  app.use(express.json({ limit: '10mb' }))
+  app.use(express.urlencoded({ limit: '10mb', extended: true }))
 
   app.enableVersioning({ type: VersioningType.URI })
   app.useGlobalPipes(new ValidationPipe({ transform: true }))
