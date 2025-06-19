@@ -30,7 +30,7 @@ jobs:
     name: Deploy to ${{ github.event.inputs.environment || 'staging' }}
     uses: fulldiveVR/ai-wayz-infrastructure/.github/workflows/deploy-stack-gs.yaml@main
     with:
-      service: "template-api"
+      service: "llm-proxy"
       env: ${{ github.event.inputs.environment || 'staging' }}
       platform: "nodejs"
       telegram-notify-bot-chat: "-985701161"

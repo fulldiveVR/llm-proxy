@@ -1,0 +1,51 @@
+secretsprovider: gcpkms://projects/ai-asia-382012/locations/global/keyRings/ai-wayz-pulumi-2002051/cryptoKeys/ai-wayz-pulumi-e9ef33c
+encryptedkey: CiQAZ+DZAa6u4Db9OZOnQDXMCtDcWTy4yNOd8ypVWYvcZ32myVISSQDNyZebEw/oLRVRratfg0/CvTCUu/HaFPBU24VCZ/FttJrdjsyVhfHC0jLjAkEFq9Jw9OoZ0Kq1lR6jBmL71tramQbcv/5zBEE=
+config:
+  llm-proxy:base-stack:
+    cfStackName: organization/ai-wayz-infrastructure/dev
+    stackName: organization/ai-wayz-infrastructure/staging
+  llm-proxy:buckets: {}
+  llm-proxy:discord-alerts:
+    webhookId: "1106571237037191309"
+  llm-proxy:service:
+    k8s:
+      domain: llm-proxy.aiwayz.com
+      env:
+        VERTEX_PROJECT_ID: "ai-east"
+        VERTEX_LOCATION: "us-central1"
+        VERTEX_CLIENT_EMAIL: "vertex-staging@ai-east.iam.gserviceaccount.com"
+        LANGFUSE_BASE_URL: "https://ai-stats.aiwayz.com/"
+      image: asia.gcr.io/ai-east/llm-proxy:latest
+      resources:
+        limits:
+          cpu: "100m"
+          ephemeral-storage: "8Gi"
+          memory: "1Gi"
+        requests:
+          cpu: "4m"
+          ephemeral-storage: "4Gi"
+          memory: "200Mi"
+      port: 8080
+      secretEnv:
+        OPENAI_API_KEY: open-ai-api-key
+        ANTHROPIC_API_KEY: anthropic-api-key
+        VERTEX_PRIVATE_KEY: vertex-private-key
+        LANGFUSE_SECRET_KEY: langfuse-secret-key
+        LANGFUSE_PUBLIC_KEY: langfuse-public-key
+    name: llm-proxy
+  llm-proxy:telegram:
+    defaultChatId: "-985701161"
+  llm-proxy:open-ai-api-key:
+    secure: v1:PL/Sxot7qKrdfXkE:CZHMxW2oG4lXTx+L0BHoP2KqjDzA5CFsSZutSFm3WQvL+IMqMJpoQ0VyXFSRsQjGWKdGd+mnc6A7KpIgIQ35cAF8yQG4i375a2GFEJlFqrnuWAGs8mBNK2SjGU3DTJDFXkGN+tIQE8UtF6KS9unAREK1uC4y0+EporF/tslHK27DjFQF0BL6JOaCo5inAiHYpIC9JHbKLjZ8ZAYw8AQSLRz7ZfiRvmX1SrRcPyaNhxdbTVgJ
+  llm-proxy:anthropic-api-key:
+    secure: v1:HwKua8a/Xb66L5ZX:O22Ke+vXA3RkWASS1YqFSbUPEu2ZaLbir9hUAM994SVSHzrDF0/FwganamebS17d+E6ClaCn8+eKPAH4FLUtBQKzn6zOKO3tuagf6tnk2c6g7Z55n0EgP+oGoEYdXImXJHT9P7wkfIgcETqnkmmDi67GA1rbdEe/AAsTqA==
+  llm-proxy:vertex-private-key:
+    secure: v1:25Q5zM2HYHxJF0OJ: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
+  llm-proxy:langfuse-secret-key:
+    secure: v1:55671INd0jvlVbbL:iVQHYzjRrO5jhQJzNrDtekXEWAXMS2wE47I4ggV+EMuTi917ftHMd4cFPIqKF7c8CZZxkkpCAQ1q4w==
+  llm-proxy:langfuse-public-key:
+    secure: v1:Q6vQ709ig++jP5bP:yoraESE2FhvLgSSA4kaE+ujX9QlEjEIaIIkDphtkG4mygC0Mc4o8huSkIg5nY6KcmhtpU9qe+9d+uQ==
+  llm-proxy:discord-alerts-token:
+    secure: v1:zGO13qHvLtO+hg6w:QKgaHgypsG+v0WCVsR0H35DqGQEqLJnBKkEgc8svGBBUYbP6Of8PRcuOgkB6WqiEuIjYtnt/fWLs2Vj7GRYULKSFFpjzE8NJdCSVk8irUM9LnfUB
+  llm-proxy:telegram-bot-token:
+    secure: v1:i5Jtdf5WQE2LDVDK:31LuTj4ykadCJbtkJkTAXrpFifmwDzuziteNAvh0GhhMQnCM/xsa4v7+ZAOLakEx26zPD3eq+TZLYkwEJSA=
