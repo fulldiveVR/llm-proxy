@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger } from "@nestjs/common";
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards } from "@nestjs/common";
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
 import { 
@@ -7,8 +7,11 @@ import {
   ChatCompletionResponseSwagger,
   ILLMRequest 
 } from "./llm-proxy.models";
+import { AuthGuard } from "../auth";
 
 @ApiTags("OpenAI API Compatible")
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 @Controller("v1/chat")
 export class LLMProxyController {
   private readonly logger: Logger;
@@ -20,6 +23,7 @@ export class LLMProxyController {
   @Get("/health")
   @ApiOperation({ summary: "Health check endpoint" })
   @ApiResponse({ status: 200, description: "Service is healthy" })
+  @ApiResponse({ status: 401, description: "Unauthorized - Invalid or missing API key" })
   healthCheck() {
     return { 
       status: "ok", 
@@ -41,6 +45,10 @@ export class LLMProxyController {
   @ApiResponse({
     status: 400,
     description: "Invalid request parameters"
+  })
+  @ApiResponse({
+    status: 401,
+    description: "Unauthorized - Invalid or missing API key"
   })
   @ApiResponse({
     status: 500,
