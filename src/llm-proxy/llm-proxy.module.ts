@@ -3,6 +3,7 @@ import { LLMProxyService } from "./llm-proxy.service";
 import { LLMProxyController } from "./llm-proxy.controller";
 import { LLMProxyConfig } from "./llm-proxy.config";
 import { TokenAnalyticsModule } from "../token-analytics";
+import { AuthGuard } from "../auth";
 
 @Module({
   imports: [TokenAnalyticsModule],
@@ -10,6 +11,7 @@ import { TokenAnalyticsModule } from "../token-analytics";
   providers: [
     LLMProxyConfig,
     LLMProxyService,
+    AuthGuard,
   ],
   exports: [LLMProxyService],
 })
