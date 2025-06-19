@@ -5,7 +5,6 @@ host: HOST
 llmProxy:
   openai:
     apiKey: OPENAI_API_KEY
-    defaultModel: OPENAI_MODEL
   anthropic:
     apiKey: ANTHROPIC_API_KEY
   vertex:

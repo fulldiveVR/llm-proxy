@@ -1,7 +1,7 @@
 {
-  "name": "ai-wayz-template-rabbitmq-nestjs-mongodb",
+  "name": "aiwize-llm-proxy",
   "version": "1.0.0",
-  "description": "AIWIZE template service",
+  "description": "AIWIZE LLM Proxy service",
   "scripts": {
     "build": "rm -rf dist/* && nest build",
     "build:tests": "rm -rf dist/* && nest build ./tsconfig.tests.json",
