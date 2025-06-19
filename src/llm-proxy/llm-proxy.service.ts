@@ -9,18 +9,20 @@ import {
   ChatCompletionResponseDto, 
   ChatCompletionChunkDto, 
   MessageDto,
-  ChatMessageContent
+  ChatMessageContent,
+  ModelProvider
 } from "./llm-proxy.models";
 import { LLMProxyConfig } from "./llm-proxy.config";
 import { ITokenAnalyticsInputRequest, ITokenAnalyticsInputResponse } from "../token-analytics";
-import { 
-  convertOpenAIMessagesToAISDK, 
-  convertAISDKResultToOpenAI, 
-  convertAISDKChunkToOpenAI, 
+import {
+  convertOpenAIMessagesToAISDK,
+  convertAISDKResultToOpenAI,
+  convertAISDKChunkToOpenAI,
   generateChatCompletionId,
   mapFinishReason,
   convertOpenAIToolsToAISDK,
-  convertOpenAIToolChoiceToAISDK
+  convertOpenAIToolChoiceToAISDK,
+  extractModelAndProvider
 } from "../utils";
 
 @Injectable()
@@ -55,13 +57,13 @@ export class LLMProxyService {
     });
   }
 
-  private getProvider(provider: "openai" | "anthropic" | "vertex" = "openai") {
+  private getProvider(provider: ModelProvider = ModelProvider.OpenAI) {
     switch (provider) {
-      case "openai":
+      case ModelProvider.OpenAI:
         return this.openaiProvider;
-      case "anthropic":
+      case ModelProvider.Anthropic:
         return this.anthropicProvider;
-      case "vertex":
+      case ModelProvider.Vertex:
         return this.vertexProvider;
       default:
         return this.openaiProvider;
@@ -69,38 +71,33 @@ export class LLMProxyService {
   }
 
   /**
-   * Automatically detect provider based on model name
+   * Resolve provider and model from request
    */
-  private detectProvider(model: string): "openai" | "anthropic" | "vertex" {
-    const modelLower = model.toLowerCase();
-    
-    // Anthropic models
-    if (modelLower.includes('claude')) {
-      return 'anthropic';
+  private resolveProviderAndModel(model: string, requestProvider?: ModelProvider) {
+    if (requestProvider) {
+      return { provider: requestProvider, model };
     }
     
-    // Vertex AI models  
-    if (modelLower.includes('gemini') || modelLower.includes('vertex')) {
-      return 'vertex';
-    }
-    
-    // Default to OpenAI for GPT models and others
-    return 'openai';
+    const extracted = extractModelAndProvider(model);
+    return {
+      provider: (extracted.provider as ModelProvider),
+      model: extracted.model
+    };
   }
 
   async generateResponse(request: ILLMRequest): Promise<ChatCompletionResponseDto> {
     const { messages, model, temperature, max_tokens, user, tools, tool_choice } = request;
     
-    // Auto-detect provider if not specified
-    const provider = request.provider || this.detectProvider(model);
+    // Resolve provider and model
+    const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
     const selectedProvider = this.getProvider(provider);
 
     // Start analytics session
     const analyticsRequest: ITokenAnalyticsInputRequest = {
-      traceName: `LLM Generation - ${provider}/${model}`,
+      traceName: `LLM Generation - ${provider}/${actualModel}`,
       generationName: "llm-generation",
       userId: user || "anonymous",
-      model: model,
+      model: actualModel,
       input: messages.map(msg => ({
         role: msg.role,
         content: msg.content
@@ -122,7 +119,7 @@ export class LLMProxyService {
       
       // Use Vercel AI SDK to generate text
       const result = await generateText({
-        model: selectedProvider(model),
+        model: selectedProvider(actualModel),
         messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
@@ -131,7 +128,7 @@ export class LLMProxyService {
       });
 
       // Format response in OpenAI API format
-      const response = convertAISDKResultToOpenAI(result, model);
+      const response = convertAISDKResultToOpenAI(result, actualModel);
 
       // End analytics session
       const analyticsResponse: ITokenAnalyticsInputResponse = {
@@ -163,16 +160,16 @@ export class LLMProxyService {
   async *generateStreamingResponse(request: ILLMRequest): AsyncGenerator<ChatCompletionChunkDto, void, unknown> {
     const { messages, model, temperature, user } = request;
     
-    // Auto-detect provider if not specified
-    const provider = request.provider || this.detectProvider(model);
+    // Resolve provider and model
+    const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
     const selectedProvider = this.getProvider(provider);
 
     // Start analytics session
     const analyticsRequest: ITokenAnalyticsInputRequest = {
-      traceName: `LLM Streaming - ${provider}/${model}`,
+      traceName: `LLM Streaming - ${provider}/${actualModel}`,
       generationName: "llm-streaming",
       userId: user || "anonymous",
-      model: model,
+      model: actualModel,
       input: messages.map(msg => ({
         role: msg.role,
         content: msg.content
@@ -183,7 +180,7 @@ export class LLMProxyService {
     const { trace, generation } = await this.tokenAnalytics.startSession(analyticsRequest);
 
     try {
-      this.logger.log(`Starting streaming response with provider: ${provider}, model: ${model}`);
+      this.logger.log(`Starting streaming response with provider: ${provider}, model: ${actualModel}`);
 
       // Convert OpenAI tools to AI SDK format
       const aiSDKTools = request.tools ? convertOpenAIToolsToAISDK(request.tools) : undefined;
@@ -196,7 +193,7 @@ export class LLMProxyService {
       
       // Use Vercel AI SDK to stream text
       const result = await streamText({
-        model: selectedProvider(model),
+        model: selectedProvider(actualModel),
         messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
@@ -215,13 +212,13 @@ export class LLMProxyService {
         fullContent += delta;
         
         // Format chunk in OpenAI API format
-        const chunk = convertAISDKChunkToOpenAI(delta, chatId, created, model);
+        const chunk = convertAISDKChunkToOpenAI(delta, chatId, created, actualModel);
         
         yield chunk;
       }
 
       // Send final chunk with finish_reason
-      const finalChunk = convertAISDKChunkToOpenAI('', chatId, created, model, "stop");
+      const finalChunk = convertAISDKChunkToOpenAI('', chatId, created, actualModel, "stop");
       
       yield finalChunk;
 

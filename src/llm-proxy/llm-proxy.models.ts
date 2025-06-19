@@ -82,7 +82,7 @@ export class ChatCompletionRequestDto {
   })
   @IsOptional()
   @IsString()
-  provider?: "openai" | "anthropic" | "vertex";
+  provider?: ModelProvider;
 
   @ApiPropertyOptional({
     description: "Temperature for generation (0.0 to 2.0)",
@@ -199,8 +199,14 @@ export class ChatCompletionResponseSwagger implements ChatCompletion {
   service_tier?: "auto" | "default" | "flex" | null;
 }
 
+export enum ModelProvider {
+  OpenAI = "openai",
+  Anthropic = "anthropic",
+  Vertex = "vertex"
+}
+
 // Internal interface for service layer (extends ChatCompletionRequestDto)
 export interface ILLMRequest extends ChatCompletionRequestDto {
-  provider?: "openai" | "anthropic" | "vertex";
+  provider?: ModelProvider;
   stream?: boolean;
 }
