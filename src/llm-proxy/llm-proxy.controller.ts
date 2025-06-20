@@ -5,7 +5,8 @@ import { LLMProxyService } from "./llm-proxy.service";
 import { 
   ChatCompletionRequestDto, 
   ChatCompletionResponseSwagger,
-  ILLMRequest 
+  ILLMRequest, 
+  ModelProvider
 } from "./llm-proxy.models";
 import { AuthGuard } from "../auth";
 
@@ -57,14 +58,14 @@ export class LLMProxyController {
   })
   async createChatCompletion(
     @Body() requestDto: ChatCompletionRequestDto,
-    @Headers("x-provider") xProvider: string,
+    @Headers("x-provider") xProvider: ModelProvider,
     @Res() res: Response
   ): Promise<void> {
     try {
       const isStreaming = requestDto.stream || false;
       
       // Log incoming request
-      const effectiveProvider = xProvider || requestDto.provider || 'auto';
+      const effectiveProvider = xProvider || requestDto.provider;
       this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${effectiveProvider}, x-provider=${xProvider || 'none'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}`);
       
       // Prepare request for the service
