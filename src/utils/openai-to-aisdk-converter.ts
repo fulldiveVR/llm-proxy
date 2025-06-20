@@ -61,24 +61,42 @@ export function convertOpenAIMessagesToAISDK(messages: MessageDto[]): CoreMessag
     // Handle system messages (must be string)
     if (msg.role === 'system') {
       const textContent = extractTextContent(msg.content);
-      result.push({ role: 'system', content: textContent });
+      // Replace empty system messages with placeholder for Anthropic compatibility
+      const content = textContent && textContent.trim() ? textContent : '.';
+      result.push({ role: 'system', content });
       continue;
     }
     
     // Handle user messages (can be string or content array)
     if (msg.role === 'user') {
       if (typeof msg.content === 'string') {
-        result.push({ role: 'user', content: msg.content });
+        // Replace empty string messages with placeholder for Anthropic compatibility
+        const content = msg.content.trim() || '.';
+        result.push({ role: 'user', content });
       } else if (Array.isArray(msg.content)) {
         // Convert to AI SDK format for multimodal content
-        const aiSDKContent = msg.content.map((part: any) => {
-          if (part.type === 'text') {
-            return { type: 'text', text: part.text };
-          } else if (part.type === 'image_url') {
-            return { type: 'image', image: part.image_url.url };
-          }
-          return part; // fallback
-        });
+        const aiSDKContent = msg.content
+          .map((part: any) => {
+            if (part.type === 'text') {
+              return { type: 'text', text: part.text };
+            } else if (part.type === 'image_url') {
+              return { type: 'image', image: part.image_url.url };
+            }
+            return part; // fallback
+          })
+          .filter((part: any) => {
+            // Filter out empty text blocks for Anthropic compatibility
+            if (part.type === 'text') {
+              return part.text && part.text.trim();
+            }
+            return true; // Keep non-text parts
+          });
+        
+        // If no valid content after filtering, add a minimal text block
+        if (aiSDKContent.length === 0) {
+          aiSDKContent.push({ type: 'text', text: '.' });
+        }
+        
         result.push({ role: 'user', content: aiSDKContent });
       }
       continue;
@@ -87,11 +105,13 @@ export function convertOpenAIMessagesToAISDK(messages: MessageDto[]): CoreMessag
     // Handle regular assistant messages (string content)
     if (msg.role === 'assistant') {
       const textContent = extractTextContent(msg.content);
-      // Convert empty arrays to empty strings for assistant messages
-      result.push({ 
-        role: 'assistant', 
-        content: textContent || '' 
-      });
+      // Skip empty assistant messages for Anthropic compatibility
+      if (textContent && textContent.trim()) {
+        result.push({
+          role: 'assistant',
+          content: textContent
+        });
+      }
       continue;
     }
     
