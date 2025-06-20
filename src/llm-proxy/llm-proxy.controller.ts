@@ -58,7 +58,7 @@ export class LLMProxyController {
   })
   async createChatCompletion(
     @Body() requestDto: ChatCompletionRequestDto,
-    @Headers("x-provider") xProvider: ModelProvider,
+    @Headers("x-provider") xProvider: ModelProvider | undefined,
     @Res() res: Response
   ): Promise<void> {
     try {

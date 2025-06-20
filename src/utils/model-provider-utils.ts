@@ -27,20 +27,5 @@ export const extractModelAndProvider = (model: string): { provider: ModelProvide
   
   // "/" separator found - first part is provider, rest is model
   const [provider, ...modelId] = split;
-  const providerLower = provider.toLowerCase();
-  
-  switch (providerLower) {
-    case 'openrouter':
-      return { provider: ModelProvider.OpenRouter, model: modelId.join(separator) };
-    case 'openai':
-      return { provider: ModelProvider.OpenAI, model: modelId.join(separator) };
-    case 'anthropic':
-      return { provider: ModelProvider.Anthropic, model: modelId.join(separator) };
-    case 'vertex':
-    case 'google':
-      return { provider: ModelProvider.Vertex, model: modelId.join(separator) };
-    default:
-      // For unknown providers, return as-is and let the service handle it
-      return { provider: provider as ModelProvider, model: modelId.join(separator) };
-  }
+  return { provider: provider as ModelProvider, model: modelId.join(separator) };
 };
