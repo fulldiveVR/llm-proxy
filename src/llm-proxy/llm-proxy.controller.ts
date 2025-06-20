@@ -37,12 +37,7 @@ export class LLMProxyController {
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
   })
-  @ApiHeader({
-    name: "X-Provider",
-    description: "Override provider for this request (optional)",
-    required: false,
-    example: "openrouter"
-  })
+
   @ApiResponse({
     status: 200,
     description: "Chat completion created successfully",
@@ -69,13 +64,14 @@ export class LLMProxyController {
       const isStreaming = requestDto.stream || false;
       
       // Log incoming request
-      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${requestDto.provider || 'auto'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}`);
+      const effectiveProvider = xProvider || requestDto.provider || 'auto';
+      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${effectiveProvider}, x-provider=${xProvider || 'none'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}`);
       
       // Prepare request for the service
       const request: ILLMRequest = {
         messages: requestDto.messages,
         model: requestDto.model,
-        provider: requestDto.provider,
+        provider: effectiveProvider, // X-Provider header overrides body provider
         temperature: requestDto.temperature,
         max_tokens: requestDto.max_tokens,
         user: requestDto.user,
