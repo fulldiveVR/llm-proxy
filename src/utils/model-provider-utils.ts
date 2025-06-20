@@ -8,7 +8,7 @@ export const extractModelAndProvider = (model: string): { provider: ModelProvide
   const split = model.split(separator);
   
   if (split.length === 1) {
-    // no "/" separator found - auto-detect provider
+    // No "/" separator found - auto-detect provider based on model name
     const modelLower = model.toLowerCase();
     
     // Anthropic models
@@ -25,6 +25,7 @@ export const extractModelAndProvider = (model: string): { provider: ModelProvide
     return { provider: ModelProvider.OpenAI, model: model };
   }
   
+  // "/" separator found - first part is provider, rest is model
   const [provider, ...modelId] = split;
   return { provider: provider as ModelProvider, model: modelId.join(separator) };
 };

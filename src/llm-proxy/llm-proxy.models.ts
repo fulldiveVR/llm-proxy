@@ -17,6 +17,13 @@ export type ChatMessageContentItem =
 
 export type ChatMessageContent = string | ChatMessageContentItem[];
 
+export enum ModelProvider {
+  OpenAI = "openai",
+  Anthropic = "anthropic",
+  Vertex = "vertex",
+  OpenRouter = "openrouter"
+}
+
 // OpenAI API compatible models
 export class MessageDto {
   @ApiProperty({
@@ -78,7 +85,7 @@ export class ChatCompletionRequestDto {
   @ApiPropertyOptional({
     description: "Provider to use for generation (internal use)",
     example: "openai",
-    enum: ["openai", "anthropic", "vertex"],
+    enum: Object.values(ModelProvider),
   })
   @IsOptional()
   @IsString()
@@ -197,12 +204,6 @@ export class ChatCompletionResponseSwagger implements ChatCompletion {
     required: false
   })
   service_tier?: "auto" | "default" | "flex" | null;
-}
-
-export enum ModelProvider {
-  OpenAI = "openai",
-  Anthropic = "anthropic",
-  Vertex = "vertex"
 }
 
 // Internal interface for service layer (extends ChatCompletionRequestDto)

@@ -12,6 +12,10 @@ export interface ILLMProxyConfig {
     projectId: string;
     location: string;
   };
+  openrouter: {
+    apiKey: string;
+    baseUrl?: string;
+  };
 }
 
 @Injectable()
@@ -36,6 +40,13 @@ export class LLMProxyConfig implements ILLMProxyConfig {
       location: this.config.get<string>("llmProxy.vertex.location") || "us-central1",
       clientEmail: this.config.get<string>("llmProxy.vertex.clientEmail"),
       privateKey: this.config.get<string>("llmProxy.vertex.privateKey"),
+    };
+  }
+
+  get openrouter() {
+    return {
+      apiKey: this.config.get<string>("llmProxy.openrouter.apiKey"),
+      baseUrl: this.config.get<string>("llmProxy.openrouter.baseUrl") || "https://openrouter.ai/api/v1",
     };
   }
 }

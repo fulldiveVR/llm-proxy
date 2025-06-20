@@ -31,6 +31,7 @@ export class LLMProxyService {
   private readonly openaiProvider;
   private readonly anthropicProvider;
   private readonly vertexProvider;
+  private readonly openrouterProvider;
 
   constructor(
     private config: LLMProxyConfig,
@@ -55,6 +56,12 @@ export class LLMProxyService {
         }
       }
     });
+
+    // OpenRouter uses OpenAI-compatible API but with different base URL
+    this.openrouterProvider = createOpenAI({
+      apiKey: this.config.openrouter.apiKey,
+      baseURL: this.config.openrouter.baseUrl,
+    });
   }
 
   private getProvider(provider: ModelProvider = ModelProvider.OpenAI) {
@@ -65,6 +72,8 @@ export class LLMProxyService {
         return this.anthropicProvider;
       case ModelProvider.Vertex:
         return this.vertexProvider;
+      case ModelProvider.OpenRouter:
+        return this.openrouterProvider;
       default:
         return this.openaiProvider;
     }

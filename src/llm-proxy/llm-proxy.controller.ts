@@ -1,11 +1,12 @@
-import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards } from "@nestjs/common";
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
+import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards, Headers } from "@nestjs/common";
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth, ApiHeader } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
 import { 
   ChatCompletionRequestDto, 
   ChatCompletionResponseSwagger,
-  ILLMRequest 
+  ILLMRequest, 
+  ModelProvider
 } from "./llm-proxy.models";
 import { AuthGuard } from "../auth";
 
@@ -37,6 +38,7 @@ export class LLMProxyController {
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
   })
+
   @ApiResponse({
     status: 200,
     description: "Chat completion created successfully",
@@ -56,19 +58,21 @@ export class LLMProxyController {
   })
   async createChatCompletion(
     @Body() requestDto: ChatCompletionRequestDto,
+    @Headers("x-provider") xProvider: ModelProvider | undefined,
     @Res() res: Response
   ): Promise<void> {
     try {
       const isStreaming = requestDto.stream || false;
       
       // Log incoming request
-      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${requestDto.provider || 'auto'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}`);
+      const effectiveProvider = xProvider || requestDto.provider;
+      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${effectiveProvider}, x-provider=${xProvider || 'none'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}`);
       
       // Prepare request for the service
       const request: ILLMRequest = {
         messages: requestDto.messages,
         model: requestDto.model,
-        provider: requestDto.provider,
+        provider: effectiveProvider, // X-Provider header overrides body provider
         temperature: requestDto.temperature,
         max_tokens: requestDto.max_tokens,
         user: requestDto.user,

@@ -1,0 +1,22 @@
+{
+  "name": "llm-proxy-examples",
+  "version": "1.0.0",
+  "description": "Examples for using llm-proxy with different clients",
+  "main": "nodejs-client.js",
+  "scripts": {
+    "start": "node nodejs-client.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "openai": "^4.0.0"
+  },
+  "keywords": [
+    "llm",
+    "proxy",
+    "openai",
+    "anthropic",
+    "openrouter"
+  ],
+  "author": "llm-proxy",
+  "license": "MIT"
+}
