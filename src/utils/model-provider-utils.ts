@@ -8,7 +8,7 @@ export const extractModelAndProvider = (model: string): { provider: ModelProvide
   const split = model.split(separator);
   
   if (split.length === 1) {
-    // no "/" separator found - auto-detect provider
+    // No "/" separator found - auto-detect provider based on model name
     const modelLower = model.toLowerCase();
     
     // Anthropic models
@@ -25,35 +25,10 @@ export const extractModelAndProvider = (model: string): { provider: ModelProvide
     return { provider: ModelProvider.OpenAI, model: model };
   }
   
+  // "/" separator found - first part is provider, rest is model
   const [provider, ...modelId] = split;
   const providerLower = provider.toLowerCase();
   
-  // Check if it's an OpenRouter model format (provider/model)
-  // OpenRouter supports models from multiple providers with format like "openai/gpt-4", "anthropic/claude-3-sonnet", etc.
-  // If the provider part matches known OpenRouter providers, treat it as OpenRouter
-  const openRouterProviders = ['openai', 'anthropic', 'google', 'meta', 'microsoft', 'mistral', 'cohere', 'ai21', 'huggingface'];
-  if (openRouterProviders.includes(providerLower)) {
-    // This could be an OpenRouter model, but we need to distinguish from direct provider usage
-    // For now, we'll assume direct provider usage unless explicitly specified as openrouter
-    if (providerLower === 'openrouter') {
-      return { provider: ModelProvider.OpenRouter, model: modelId.join(separator) };
-    }
-    
-    // Map to direct providers
-    switch (providerLower) {
-      case 'openai':
-        return { provider: ModelProvider.OpenAI, model: modelId.join(separator) };
-      case 'anthropic':
-        return { provider: ModelProvider.Anthropic, model: modelId.join(separator) };
-      case 'google':
-        return { provider: ModelProvider.Vertex, model: modelId.join(separator) };
-      default:
-        // For other providers not directly supported, use OpenRouter
-        return { provider: ModelProvider.OpenRouter, model: model };
-    }
-  }
-  
-  // Direct provider specification
   switch (providerLower) {
     case 'openrouter':
       return { provider: ModelProvider.OpenRouter, model: modelId.join(separator) };
@@ -65,6 +40,7 @@ export const extractModelAndProvider = (model: string): { provider: ModelProvide
     case 'google':
       return { provider: ModelProvider.Vertex, model: modelId.join(separator) };
     default:
+      // For unknown providers, return as-is and let the service handle it
       return { provider: provider as ModelProvider, model: modelId.join(separator) };
   }
 };
