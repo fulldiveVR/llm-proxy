@@ -35,8 +35,6 @@ export class TokenAnalyticsService implements OnApplicationShutdown {
       
       generation.end(generationOutput);
       trace.update(traceOutput);
-      
-      this.logger.debug('Analytics session ended successfully');
     } catch (error) {
       this.logger.error(`Error ending analytics session: ${error.message}`);
       throw error;

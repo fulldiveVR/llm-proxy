@@ -16,22 +16,78 @@ export function jsonSchemaToZod(jsonSchema: any): z.ZodObject<any> {
     
     switch (property.type) {
       case 'string':
-        zodShape[key] = z.string().describe(property.description || '');
+        // Handle string enums
+        if (property.enum && Array.isArray(property.enum)) {
+          zodShape[key] = z.enum(property.enum as [string, ...string[]]).describe(property.description || '');
+        } else {
+          zodShape[key] = z.string().describe(property.description || '');
+        }
         break;
       case 'number':
-        zodShape[key] = z.number().describe(property.description || '');
+        let numberSchema = z.number().describe(property.description || '');
+        // Handle number constraints
+        if (property.minimum !== undefined) {
+          numberSchema = numberSchema.min(property.minimum);
+        }
+        if (property.maximum !== undefined) {
+          numberSchema = numberSchema.max(property.maximum);
+        }
+        zodShape[key] = numberSchema;
+        break;
+      case 'integer':
+        let intSchema = z.number().int().describe(property.description || '');
+        if (property.minimum !== undefined) {
+          intSchema = intSchema.min(property.minimum);
+        }
+        if (property.maximum !== undefined) {
+          intSchema = intSchema.max(property.maximum);
+        }
+        zodShape[key] = intSchema;
         break;
       case 'boolean':
         zodShape[key] = z.boolean().describe(property.description || '');
         break;
       case 'array':
-        zodShape[key] = z.array(z.string()).describe(property.description || '');
+        // Handle array items type
+        if (property.items) {
+          switch (property.items.type) {
+            case 'string':
+              zodShape[key] = z.array(z.string()).describe(property.description || '');
+              break;
+            case 'number':
+              zodShape[key] = z.array(z.number()).describe(property.description || '');
+              break;
+            case 'integer':
+              zodShape[key] = z.array(z.number().int()).describe(property.description || '');
+              break;
+            case 'boolean':
+              zodShape[key] = z.array(z.boolean()).describe(property.description || '');
+              break;
+            case 'object':
+              zodShape[key] = z.array(z.object({})).describe(property.description || '');
+              break;
+            default:
+              zodShape[key] = z.array(z.string()).describe(property.description || '');
+          }
+        } else {
+          zodShape[key] = z.array(z.string()).describe(property.description || '');
+        }
         break;
       case 'object':
-        zodShape[key] = z.object({}).describe(property.description || '');
+        // Handle nested objects
+        if (property.properties) {
+          zodShape[key] = jsonSchemaToZod(property);
+        } else {
+          zodShape[key] = z.object({}).describe(property.description || '');
+        }
         break;
       default:
-        zodShape[key] = z.string().describe(property.description || '');
+        // Handle union types (anyOf, oneOf)
+        if (property.anyOf || property.oneOf) {
+          zodShape[key] = z.union([z.string(), z.number()]).describe(property.description || '');
+        } else {
+          zodShape[key] = z.string().describe(property.description || '');
+        }
     }
     
     // Make optional if not in required array
