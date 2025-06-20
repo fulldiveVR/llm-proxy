@@ -8,7 +8,7 @@ This implementation provides a comprehensive LLM proxy service with analytics tr
 - **OpenAI API Endpoints**: Full compatibility with `/v1/chat/completions` endpoint
 - **Drop-in Replacement**: Works seamlessly with any OpenAI API client
 - **Streaming Support**: Server-Sent Events streaming compatible with OpenAI format
-- **Multi-Provider Support**: OpenAI, Anthropic (Claude), and Google Vertex AI integration
+- **Multi-Provider Support**: OpenAI, Anthropic (Claude), Google Vertex AI, and OpenRouter integration
 - **Transparent Proxying**: Routes requests to appropriate providers while maintaining OpenAI API format
 - **Authentication**: Bearer token authentication compatible with OpenAI API
 
@@ -75,6 +75,7 @@ Content-Type: application/json
 - **OpenAI**: `gpt-4`, `gpt-4-turbo`, `gpt-3.5-turbo`, etc.
 - **Anthropic**: `claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`, etc.
 - **Vertex AI**: `gemini-1.5-pro`, `gemini-1.5-flash`, etc.
+- **OpenRouter**: `openai/gpt-4`, `anthropic/claude-3-sonnet`, `meta/llama-3-70b`, etc.
 
 **Non-Streaming Response (OpenAI API format):**
 ```json
@@ -181,6 +182,7 @@ The proxy automatically determines the provider based on the model name:
 - **OpenAI Models**: `gpt-4`, `gpt-4-turbo`, `gpt-3.5-turbo`, etc.
 - **Anthropic Models**: `claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`, etc.
 - **Vertex AI Models**: `gemini-1.5-pro`, `gemini-1.5-flash`, etc.
+- **OpenRouter Models**: `openai/gpt-4`, `anthropic/claude-3-sonnet`, `meta/llama-3-70b`, `mistral/mixtral-8x7b`, etc.
 
 You can also specify the provider explicitly using a custom header:
 ```bash
@@ -188,6 +190,12 @@ curl -X POST http://localhost:3000/v1/chat/completions \
   -H "X-Provider: anthropic" \
   -H "Authorization: Bearer your-api-key" \
   -d '{"model": "claude-3-sonnet", "messages": [...]}'
+
+# Or use OpenRouter for access to multiple providers
+curl -X POST http://localhost:3000/v1/chat/completions \
+  -H "X-Provider: openrouter" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{"model": "meta/llama-3-70b", "messages": [...]}'
 ```
 
 ## Configuration
@@ -214,6 +222,9 @@ llmProxy:
     location: "us-central1"
     # For local development, set up Application Default Credentials
     # or provide service account key path
+  openrouter:
+    apiKey: "your-openrouter-api-key-here"
+    baseUrl: "https://openrouter.ai/api/v1"  # optional, this is the default
 
 langfuse:
   secretKey: "your-langfuse-secret-key-here"
@@ -232,6 +243,8 @@ In production, environment variables will be automatically mapped via `custom-en
 - `OPENAI_API_KEY` → OpenAI API key
 - `ANTHROPIC_API_KEY` → Anthropic API key  
 - `VERTEX_AI_PROJECT_ID` → Google Cloud project ID
+- `OPENROUTER_API_KEY` → OpenRouter API key
+- `OPENROUTER_BASE_URL` → OpenRouter base URL (optional, defaults to https://openrouter.ai/api/v1)
 - `LANGFUSE_SECRET_KEY` → Langfuse secret key
 - `LANGFUSE_PUBLIC_KEY` → Langfuse public key
 - `PORT` → Application port
@@ -275,6 +288,26 @@ curl -X POST http://localhost:3000/v1/chat/completions \
       {
         "role": "user",
         "content": "Explain quantum computing in simple terms"
+      }
+    ],
+    "temperature": 0.7,
+    "max_tokens": 2048,
+    "user": "user-123"
+  }'
+```
+
+### Using OpenRouter Models
+
+```bash
+curl -X POST http://localhost:3000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "meta/llama-3-70b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Write a Python function to calculate fibonacci numbers"
       }
     ],
     "temperature": 0.7,

@@ -15,6 +15,9 @@ llmProxy:
     location: VERTEX_LOCATION
     clientEmail: VERTEX_CLIENT_EMAIL
     privateKey: VERTEX_PRIVATE_KEY
+  openrouter:
+    apiKey: OPENROUTER_API_KEY
+    baseUrl: OPENROUTER_BASE_URL
 
 tokenAnalytics:
   langfuse:
