@@ -78,7 +78,7 @@ export class ChatCompletionRequestDto {
   @ApiPropertyOptional({
     description: "Provider to use for generation (internal use)",
     example: "openai",
-    enum: ["openai", "anthropic", "vertex", "openrouter"],
+    enum: Object.values(ModelProvider),
   })
   @IsOptional()
   @IsString()
