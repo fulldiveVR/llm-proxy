@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards } from "@nestjs/common";
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
+import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards, Headers } from "@nestjs/common";
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth, ApiHeader } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
 import { 
@@ -37,6 +37,12 @@ export class LLMProxyController {
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
   })
+  @ApiHeader({
+    name: "X-Provider",
+    description: "Override provider for this request (optional)",
+    required: false,
+    example: "openrouter"
+  })
   @ApiResponse({
     status: 200,
     description: "Chat completion created successfully",
@@ -56,6 +62,7 @@ export class LLMProxyController {
   })
   async createChatCompletion(
     @Body() requestDto: ChatCompletionRequestDto,
+    @Headers("x-provider") xProvider: string,
     @Res() res: Response
   ): Promise<void> {
     try {
