@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards, Headers, ForbiddenException } from "@nestjs/common";
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth, ApiHeader } from "@nestjs/swagger";
+import { Body, Controller, Get, Post, Res, HttpStatus, Logger, Headers } from "@nestjs/common";
+import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
 import { 
@@ -8,8 +8,7 @@ import {
   ILLMRequest, 
   ModelProvider
 } from "./llm-proxy.models";
-import { AuthorizedUser, AuthUser, UseAuthGuard } from "../auth";
-import { IUserService } from "../user";
+import { AuthorizedUser, AuthUser } from "../auth";
 import { UseAuthAndCreditsGuard } from "../credits/credits.guard";
 
 @ApiTags("OpenAI API Compatible")
@@ -17,7 +16,7 @@ import { UseAuthAndCreditsGuard } from "../credits/credits.guard";
 export class LLMProxyController {
   private readonly logger: Logger;
 
-  constructor(private readonly llmProxyService: LLMProxyService, private readonly userService: IUserService) {
+  constructor(private readonly llmProxyService: LLMProxyService) {
     this.logger = new Logger(LLMProxyController.name);
   }
 
