@@ -27,5 +27,14 @@ export const extractModelAndProvider = (model: string): { provider: ModelProvide
   
   // "/" separator found - first part is provider, rest is model
   const [provider, ...modelId] = split;
-  return { provider: provider as ModelProvider, model: modelId.join(separator) };
+  const modelName = modelId.join(separator);
+  
+  // Check if provider exists in available providers enum
+  const availableProviders = Object.values(ModelProvider);
+  if (availableProviders.includes(provider as ModelProvider)) {
+    return { provider: provider as ModelProvider, model: modelName };
+  }
+  
+  // Provider not found in enum - use OpenRouter and keep original model string
+  return { provider: ModelProvider.OpenRouter, model: model };
 };
