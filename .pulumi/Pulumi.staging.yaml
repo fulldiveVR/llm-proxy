@@ -36,6 +36,10 @@ config:
         OPENROUTER_API_KEY: openrouter-api-key
         JWT_SECRET: jwt-secret # Set me
         RABBITMQ_URI: rabbitmq-uri # Set me
+    mongo:
+      databases:
+        - dbName: llm-proxy
+          username: llm-proxy
     name: llm-proxy
   llm-proxy:telegram:
     defaultChatId: "-985701161"
