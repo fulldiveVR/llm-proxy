@@ -59,3 +59,7 @@ config:
     secure: v1:i5Jtdf5WQE2LDVDK:31LuTj4ykadCJbtkJkTAXrpFifmwDzuziteNAvh0GhhMQnCM/xsa4v7+ZAOLakEx26zPD3eq+TZLYkwEJSA=
   llm-proxy:openrouter-api-key:
     secure: v1:rRYdmFljwQU8Xohe:D+VpIOKMQONQj+yZXht0YKt0RkKjKVfpKTf0LSAfIgwEH43zSGcAaojEw6iFOKrMRKGzZ4akzaw2u+vPY6egq4FIo74ekDSAtswIiItpv291sr77fuqTzGE=
+  llm-proxy:jwt-secret:
+    secure: v1:JRry+bMMpNasfcVP:S8yRKla19bZkXRDlAbrG+PbvYZFBDACSh26MnUR5DG6V+cJBX2oc4Re1D78Qfw==
+  llm-proxy:rabbitmq-uri:
+    secure: v1:259m2rAit69xGhOf:35MHxenSyJdNNQdsSXsjQBzjkzwwg3NQ6hxt+F7bf+/TtpguKBQ97YA7c7MsaDF5Nbp6+rSqPYNiZF8cXNCclQN+KZVC/XAv2ek/6nDdQDlcNqsk38RYh4RkR+jGorx0GR06kBXOfq5AeUvBwY8=
