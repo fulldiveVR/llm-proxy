@@ -1,28 +1,10 @@
-import { ExecutionContext, ForbiddenException, SetMetadata, UseGuards } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UseGuards } from '@nestjs/common';
 import { UserService } from '../user/user.service';
+import { AuthGuard } from '../auth/auth.guard';
 
-export const REQUIRE_ACTIVE_CREDITS_KEY = 'requireActiveCredits';
-
-// Metadata decorator to mark methods that require active credits
-export const RequireActiveCredits = () => SetMetadata(REQUIRE_ACTIVE_CREDITS_KEY, true);
-
-// Guard to check active credits
-export class ActiveCreditsGuard {
-  constructor(
-    private reflector: Reflector,
-  ) {}
-
+@Injectable()
+export class CreditsGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requireActiveCredits = this.reflector.getAllAndOverride<boolean>(REQUIRE_ACTIVE_CREDITS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (!requireActiveCredits) {
-      return true;
-    }
-
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
@@ -40,5 +22,6 @@ export class ActiveCreditsGuard {
   }
 }
 
-// Combined decorator for convenience
-export const UseCreditsGuard = () => UseGuards(ActiveCreditsGuard);
+export function UseAuthAndCreditsGuard(): MethodDecorator {
+  return UseGuards(AuthGuard, CreditsGuard);
+}

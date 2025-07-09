@@ -89,9 +89,6 @@ export class LLMProxyService {
     
     const extracted = extractModelAndProvider(model);
 
-    console.log('Extracted provider:', extracted.provider);
-    console.log('Extracted model:', extracted.model);
-
     return {
       provider: (extracted.provider as ModelProvider),
       model: extracted.model
