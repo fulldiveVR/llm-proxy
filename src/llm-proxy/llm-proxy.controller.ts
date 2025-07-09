@@ -8,11 +8,9 @@ import {
   ILLMRequest, 
   ModelProvider
 } from "./llm-proxy.models";
-import { AuthGuard } from "../auth";
+import { AuthorizedUser, AuthUser, UseAuthGuard } from "../auth";
 
 @ApiTags("OpenAI API Compatible")
-@ApiBearerAuth()
-@UseGuards(AuthGuard)
 @Controller("v1/chat")
 export class LLMProxyController {
   private readonly logger: Logger;
@@ -34,6 +32,7 @@ export class LLMProxyController {
   }
 
   @Post("completions")
+  @UseAuthGuard()
   @ApiOperation({
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
@@ -59,14 +58,15 @@ export class LLMProxyController {
   async createChatCompletion(
     @Body() requestDto: ChatCompletionRequestDto,
     @Headers("x-provider") xProvider: ModelProvider | undefined,
-    @Res() res: Response
+    @Res() res: Response,
+    @AuthUser() user: AuthorizedUser
   ): Promise<void> {
     try {
       const isStreaming = requestDto.stream || false;
       
       // Log incoming request
       const effectiveProvider = xProvider || requestDto.provider;
-      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${effectiveProvider}, x-provider=${xProvider || 'none'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}`);
+      this.logger.log(`Incoming chat completion request: user=${user.id}, model=${requestDto.model}, provider=${effectiveProvider || 'auto'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}, temperature=${requestDto.temperature}`);
       
       // Prepare request for the service
       const request: ILLMRequest = {
@@ -75,7 +75,7 @@ export class LLMProxyController {
         provider: effectiveProvider, // X-Provider header overrides body provider
         temperature: requestDto.temperature,
         max_tokens: requestDto.max_tokens,
-        user: requestDto.user,
+        user: user.id,
         tools: requestDto.tools,
         tool_choice: requestDto.tool_choice,
         stream: requestDto.stream

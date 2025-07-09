@@ -1,46 +1,48 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
-import { Request } from 'express';
-import { IConfig } from '../infrastructure';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UseGuards,
+  applyDecorators,
+  createParamDecorator,
+} from "@nestjs/common"
+import { Request } from "express"
+import { ApiBearerAuth } from "@nestjs/swagger"
+
+import { IAuthService } from "./auth.service"
+import { AuthorizedUser } from "./auth.models"
+
+interface IUserRequest extends Request {
+  user: AuthorizedUser
+}
+
+const getAccessToken = (ctx: ExecutionContext): string => {
+  const { headers } = ctx.switchToHttp().getRequest() as IUserRequest
+  const [, accessToken] = headers.authorization?.split(" ") || []
+  return accessToken
+}
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  private readonly logger = new Logger(AuthGuard.name);
+  public constructor(private readonly authService: IAuthService) {}
 
-  constructor(private readonly config: IConfig) {}
+  public async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest() as IUserRequest
 
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<Request>();
-    const authHeader = request.headers.authorization;
+    const accessToken = getAccessToken(context)
+    request.user = await this.authService.authenticate(accessToken)
 
-    if (!authHeader) {
-      this.logger.warn('Missing authorization header');
-      throw new UnauthorizedException('Authorization header is required');
-    }
-
-    // Extract API key from Authorization header
-    // Support both "Bearer <token>" and direct API key formats
-    let providedApiKey: string;
-    
-    if (authHeader.startsWith('Bearer ')) {
-      providedApiKey = authHeader.substring(7);
-    } else {
-      providedApiKey = authHeader;
-    }
-
-    // Get the expected API key from configuration
-    const expectedApiKey = this.config.get<string>('auth.apiKey');
-
-    if (!expectedApiKey) {
-      this.logger.error('AUTH_API_KEY environment variable is not configured');
-      throw new UnauthorizedException('Authentication is not properly configured');
-    }
-
-    if (providedApiKey !== expectedApiKey) {
-      this.logger.warn('Invalid API key provided');
-      throw new UnauthorizedException('Invalid API key');
-    }
-
-    this.logger.debug('Authentication successful');
-    return true;
+    return true
   }
 }
+
+export function UseAuthGuard(): MethodDecorator {
+  return applyDecorators(UseGuards(AuthGuard), ApiBearerAuth())
+}
+
+export const AuthUser = createParamDecorator((data: unknown, ctx: ExecutionContext): AuthorizedUser => {
+  const { user } = ctx.switchToHttp().getRequest()
+  return user
+})
+
+export const AccessToken = createParamDecorator((data: unknown, ctx: ExecutionContext): string => getAccessToken(ctx))
