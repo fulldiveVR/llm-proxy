@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common"
 
 import { ObjectIdRepositoryBase } from "../lib"
 import { User } from "./user.models"
+import { ICredits } from "../credits/credits.models"
 
 export type UserDocument = User & { _id: ObjectId }
 
@@ -36,5 +37,9 @@ export class UserRepository extends ObjectIdRepositoryBase<UserDocument> {
 
   public override async delete(id: string): Promise<void> {
     await this.collection.deleteOne({ id })
+  }
+
+  public async updateCredits(id: string, credits: ICredits): Promise<void> {
+    await this.collection.findOneAndUpdate({ id }, { $set: { credits } })
   }
 }

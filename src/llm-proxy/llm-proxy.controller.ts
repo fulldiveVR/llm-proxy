@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards, Headers } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards, Headers, ForbiddenException } from "@nestjs/common";
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth, ApiHeader } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
@@ -9,13 +9,15 @@ import {
   ModelProvider
 } from "./llm-proxy.models";
 import { AuthorizedUser, AuthUser, UseAuthGuard } from "../auth";
+import { IUserService } from "../user";
+import { UseCreditsGuard } from "../credits/credits.guard";
 
 @ApiTags("OpenAI API Compatible")
 @Controller("v1/chat")
 export class LLMProxyController {
   private readonly logger: Logger;
 
-  constructor(private readonly llmProxyService: LLMProxyService) {
+  constructor(private readonly llmProxyService: LLMProxyService, private readonly userService: IUserService) {
     this.logger = new Logger(LLMProxyController.name);
   }
 
@@ -33,6 +35,7 @@ export class LLMProxyController {
 
   @Post("completions")
   @UseAuthGuard()
+  @UseCreditsGuard()
   @ApiOperation({
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
@@ -50,6 +53,10 @@ export class LLMProxyController {
   @ApiResponse({
     status: 401,
     description: "Unauthorized - Invalid or missing API key"
+  })
+  @ApiResponse({
+    status: 403,
+    description: "Forbidden - User has no active credits"
   })
   @ApiResponse({
     status: 500,
@@ -70,15 +77,9 @@ export class LLMProxyController {
       
       // Prepare request for the service
       const request: ILLMRequest = {
-        messages: requestDto.messages,
-        model: requestDto.model,
+        ...requestDto,
+        user: user.provider?.email?.id || user.id,
         provider: effectiveProvider, // X-Provider header overrides body provider
-        temperature: requestDto.temperature,
-        max_tokens: requestDto.max_tokens,
-        user: user.id,
-        tools: requestDto.tools,
-        tool_choice: requestDto.tool_choice,
-        stream: requestDto.stream
       };
 
       // Handle streaming response

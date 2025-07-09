@@ -4,10 +4,12 @@ import { UserNotFoundError } from "../lib"
 
 import { User } from "./user.models"
 import { UserRepository, UserDocument } from "./user.repository"
+import { ICredits } from "../credits/credits.models"
 
 export abstract class IUserService {
   public abstract getUser(userId: string): Promise<User>
   public abstract getUserByEmail(email: string): Promise<User | null>
+  public abstract updateCredits(userId: string, credits: ICredits): Promise<void>
 }
 
 @Injectable()
@@ -32,6 +34,10 @@ export class UserService implements IUserService {
 
   public async getUserByEmail(email: string): Promise<UserDocument | null> {
     return await this.userRepository.getByEmail(email)
+  }
+
+  public async updateCredits(userId: string, credits: ICredits): Promise<void> {
+    await this.userRepository.updateCredits(userId, credits)
   }
 
   public static hasActiveCredits(user: User): boolean {

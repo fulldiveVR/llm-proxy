@@ -120,13 +120,6 @@ export class ChatCompletionRequestDto {
   @IsBoolean()
   stream?: boolean;
 
-  @ApiPropertyOptional({
-    description: "User ID for tracking",
-    example: "user-123"
-  })
-  @IsOptional()
-  @IsString()
-  user?: string;
 
   @ApiPropertyOptional({
     description: "Tools available for the model to call",
@@ -208,6 +201,5 @@ export class ChatCompletionResponseSwagger implements ChatCompletion {
 
 // Internal interface for service layer (extends ChatCompletionRequestDto)
 export interface ILLMRequest extends ChatCompletionRequestDto {
-  provider?: ModelProvider;
-  stream?: boolean;
+  user?: string;
 }

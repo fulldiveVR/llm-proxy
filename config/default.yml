@@ -65,3 +65,5 @@ rmq:
       type: "fanout"
     - name: "fanout.auth.user.updated"
       type: "fanout"
+    - name: "fanout.billing.credits.updated"
+      type: "fanout"

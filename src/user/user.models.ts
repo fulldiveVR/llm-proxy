@@ -1,12 +1,5 @@
+import { ICredits } from "../credits/credits.models"
 import { IUser } from "../domain"
-
-// move me to credits module
-export interface ICredits {
-  planCredits: number
-  purchasedCredits: number
-  totalCredits: number
-  expires: Date
-}
 
 export interface User extends IUser {
   credits?: ICredits

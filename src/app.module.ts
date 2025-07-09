@@ -5,6 +5,7 @@ import { TokenAnalyticsModule } from "./token-analytics"
 import { LLMProxyModule } from "./llm-proxy"
 import { AuthModule } from "./auth"
 import { UserModule } from "./user"
+import { CreditsModule } from "./credits/credits.module"
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UserModule } from "./user"
     AuthModule,
     UserModule,
     LLMProxyModule,
+    CreditsModule,
   ],
 })
 export class AppModule {}
