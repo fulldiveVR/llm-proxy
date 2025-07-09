@@ -33,8 +33,9 @@ config:
         VERTEX_PRIVATE_KEY: vertex-private-key
         LANGFUSE_SECRET_KEY: langfuse-secret-key
         LANGFUSE_PUBLIC_KEY: langfuse-public-key
-        AUTH_API_KEY: auth-api-key
         OPENROUTER_API_KEY: openrouter-api-key
+        JWT_SECRET: jwt-secret # Set me
+        RABBITMQ_URI: rabbitmq-uri # Set me
     name: llm-proxy
   llm-proxy:telegram:
     defaultChatId: "-985701161"
@@ -52,7 +53,5 @@ config:
     secure: v1:zGO13qHvLtO+hg6w:QKgaHgypsG+v0WCVsR0H35DqGQEqLJnBKkEgc8svGBBUYbP6Of8PRcuOgkB6WqiEuIjYtnt/fWLs2Vj7GRYULKSFFpjzE8NJdCSVk8irUM9LnfUB
   llm-proxy:telegram-bot-token:
     secure: v1:i5Jtdf5WQE2LDVDK:31LuTj4ykadCJbtkJkTAXrpFifmwDzuziteNAvh0GhhMQnCM/xsa4v7+ZAOLakEx26zPD3eq+TZLYkwEJSA=
-  llm-proxy:auth-api-key:
-    secure: v1:+DwkeYRmanFRkeUG:PSyVwoVZZtDjXJhtH15iaXUzQDvdswASjLudI4fIJJSDpmsukTQvoMJf1MxEirSzOOM+3GzuF9rUz2jP
   llm-proxy:openrouter-api-key:
     secure: v1:rRYdmFljwQU8Xohe:D+VpIOKMQONQj+yZXht0YKt0RkKjKVfpKTf0LSAfIgwEH43zSGcAaojEw6iFOKrMRKGzZ4akzaw2u+vPY6egq4FIo74ekDSAtswIiItpv291sr77fuqTzGE=
