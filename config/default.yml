@@ -1,5 +1,8 @@
 env: development
 
+auth:
+  jwtSecret: "local"
+
 llmProxy:
   openai:
     apiKey: "your-openai-api-key"
@@ -22,3 +25,45 @@ tokenAnalytics:
 
 http:
   port: 8080
+
+mongodb:
+  connectionString: "mongodb://localhost"
+  dbName: "llm-proxy"
+  options:
+    directConnection: false
+  collections:
+    - name: users
+      indexes:
+        - keys:
+            id: 1
+          options:
+            unique: true
+            background: true
+        - keys:
+            'provider.email.id': 1
+            'provider.visitor.id': 1
+          options:
+            unique: true
+            background: true
+        - keys:
+            'provider.email.id': 1
+          options:
+            unique: false
+            background: true
+        - keys:
+            'provider.visitor.id': 1
+          options:
+            unique: false
+            background: true
+
+rmq:
+  connection:
+    uri: "amqp://guest:guest@localhost:5672/"
+    name: "llm-proxy"
+  exchanges:
+    - name: "fanout.auth.user.created"
+      type: "fanout"
+    - name: "fanout.auth.user.updated"
+      type: "fanout"
+    - name: "fanout.billing.credits.updated"
+      type: "fanout"

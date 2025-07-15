@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Query, Res, HttpStatus, Logger, UseGuards, Headers } from "@nestjs/common";
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth, ApiHeader } from "@nestjs/swagger";
+import { Body, Controller, Get, Post, Res, HttpStatus, Logger, Headers } from "@nestjs/common";
+import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
 import { 
@@ -8,11 +8,10 @@ import {
   ILLMRequest, 
   ModelProvider
 } from "./llm-proxy.models";
-import { AuthGuard } from "../auth";
+import { AuthorizedUser, AuthUser } from "../auth";
+import { UseAuthAndCreditsGuard } from "../credits/credits.guard";
 
 @ApiTags("OpenAI API Compatible")
-@ApiBearerAuth()
-@UseGuards(AuthGuard)
 @Controller("v1/chat")
 export class LLMProxyController {
   private readonly logger: Logger;
@@ -34,6 +33,7 @@ export class LLMProxyController {
   }
 
   @Post("completions")
+  @UseAuthAndCreditsGuard()
   @ApiOperation({
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
@@ -53,32 +53,31 @@ export class LLMProxyController {
     description: "Unauthorized - Invalid or missing API key"
   })
   @ApiResponse({
+    status: 403,
+    description: "Forbidden - User has no active credits"
+  })
+  @ApiResponse({
     status: 500,
     description: "Internal server error"
   })
   async createChatCompletion(
     @Body() requestDto: ChatCompletionRequestDto,
     @Headers("x-provider") xProvider: ModelProvider | undefined,
-    @Res() res: Response
+    @Res() res: Response,
+    @AuthUser() user: AuthorizedUser
   ): Promise<void> {
     try {
       const isStreaming = requestDto.stream || false;
       
       // Log incoming request
       const effectiveProvider = xProvider || requestDto.provider;
-      this.logger.log(`Incoming chat completion request: model=${requestDto.model || 'default'}, provider=${effectiveProvider}, x-provider=${xProvider || 'none'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}`);
+      this.logger.log(`Incoming chat completion request: user=${user.id}, model=${requestDto.model}, provider=${effectiveProvider || 'auto'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}, temperature=${requestDto.temperature}`);
       
       // Prepare request for the service
       const request: ILLMRequest = {
-        messages: requestDto.messages,
-        model: requestDto.model,
+        ...requestDto,
+        user: user.provider?.email?.id || user.id,
         provider: effectiveProvider, // X-Provider header overrides body provider
-        temperature: requestDto.temperature,
-        max_tokens: requestDto.max_tokens,
-        user: requestDto.user,
-        tools: requestDto.tools,
-        tool_choice: requestDto.tool_choice,
-        stream: requestDto.stream
       };
 
       // Handle streaming response

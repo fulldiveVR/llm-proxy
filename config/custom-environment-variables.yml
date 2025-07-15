@@ -3,7 +3,7 @@ env: NODE_ENV
 host: HOST
 
 auth:
-  apiKey: AUTH_API_KEY
+  jwtSecret: JWT_SECRET
 
 llmProxy:
   openai:
@@ -24,3 +24,11 @@ tokenAnalytics:
     secretKey: LANGFUSE_SECRET_KEY
     publicKey: LANGFUSE_PUBLIC_KEY
     baseUrl: LANGFUSE_BASE_URL
+
+mongodb:
+  connectionString: MONGO_URL
+  dbName: MONGO_DATABASE
+
+rmq:
+  connection:
+    uri: RABBITMQ_URI

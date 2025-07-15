@@ -1,5 +1,6 @@
 # App specific
 /src/domain/_generated/auth/
+/src/domain/_generated/billing/
 
 # General
 *.log

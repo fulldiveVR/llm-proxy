@@ -88,6 +88,7 @@ export class LLMProxyService {
     }
     
     const extracted = extractModelAndProvider(model);
+
     return {
       provider: (extracted.provider as ModelProvider),
       model: extracted.model
