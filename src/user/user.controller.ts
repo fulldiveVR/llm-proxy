@@ -22,10 +22,14 @@ export class UserController {
     queue: "queue.llm-proxy.user.created",
   })
   protected async handleUserCreated(message: CreatedUserMessage): Promise<void> {
-    this.logger.debug(`Received new user: ${JSON.stringify({ userId: message.id })}`)
+    try {
+      this.logger.debug(`Received new user: ${JSON.stringify({ userId: message.id })}`)
 
-    const user = this.userParser.modifyUserAfterTransport(message)
-    const created = await this.userService.createUser(user)
+      const user = this.userParser.modifyUserAfterTransport(message)
+      const created = await this.userService.createUser(user)
+    } catch (e) {
+      this.logger.log("@OnEvent(UserEventName.CREATED) controller", e)
+    }
   }
 
   @RabbitSubscribe({
@@ -34,9 +38,13 @@ export class UserController {
     queue: "queue.llm-proxy.user.updated",
   })
   protected async handleUserUpdated(message: UpdatedUserMessage): Promise<void> {
-    this.logger.debug(`Received updated user: ${JSON.stringify({ userId: message.id })}`)
+    try {
+      this.logger.debug(`Received updated user: ${JSON.stringify({ userId: message.id })}`)
 
-    const user = this.userParser.modifyUserAfterTransport(message)
-    const updated = await this.userService.updateUser(user.id, user)
+      const user = this.userParser.modifyUserAfterTransport(message)
+      const updated = await this.userService.updateUser(user.id, user)
+    } catch (e) {
+      this.logger.log("@OnEvent(UserEventName.UPDATED) controller", e)
+    }
   }
 }
