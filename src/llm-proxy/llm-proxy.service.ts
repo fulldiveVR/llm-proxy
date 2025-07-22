@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { generateText, streamText, ToolSet, ToolChoice, CoreMessage } from "ai";
+import { generateText, streamText, generateObject, streamObject, ToolSet, ToolChoice, CoreMessage } from "ai";
+import { z } from 'zod';
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVertex } from "@ai-sdk/google-vertex";
@@ -24,6 +25,7 @@ import {
   convertOpenAIToolChoiceToAISDK,
   extractModelAndProvider
 } from "../utils";
+import { jsonSchemaToZod } from "../utils/json-schema-to-zod";
 
 @Injectable()
 export class LLMProxyService {
@@ -96,7 +98,7 @@ export class LLMProxyService {
   }
 
   async generateResponse(request: ILLMRequest): Promise<ChatCompletionResponseDto> {
-    const { messages, model, temperature, max_tokens, user, tools, tool_choice } = request;
+    const { messages, model, temperature, max_tokens, user, tools, tool_choice, response_format } = request;
     
     // Resolve provider and model
     const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
@@ -127,15 +129,34 @@ export class LLMProxyService {
       // Convert messages to AI SDK format
       const aiSDKMessages = convertOpenAIMessagesToAISDK(request.messages);
       
-      // Use Vercel AI SDK to generate text
-      const result = await generateText({
+      // Common parameters for both text and object generation
+      const baseParams = {
         model: selectedProvider(actualModel),
         messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
-        ...(aiSDKTools && { tools: aiSDKTools }),
-        ...(aiSDKToolChoice && { toolChoice: aiSDKToolChoice }),
-      });
+      };
+
+      let result;
+
+      // Check if structured output is requested
+      if (response_format?.type === 'json_schema') {
+        // Convert JSON schema to Zod schema
+        const zodSchema = jsonSchemaToZod(response_format.json_schema.schema);
+        
+        // Use generateObject for structured output
+        result = await generateObject({
+          ...baseParams,
+          schema: zodSchema,
+        });
+      } else {
+        // Use regular generateText for non-structured output
+        result = await generateText({
+          ...baseParams,
+          ...(aiSDKTools && { tools: aiSDKTools }),
+          ...(aiSDKToolChoice && { toolChoice: aiSDKToolChoice }),
+        });
+      }
 
       // Format response in OpenAI API format
       const response = convertAISDKResultToOpenAI(result, actualModel);
@@ -143,7 +164,7 @@ export class LLMProxyService {
       // End analytics session
       const analyticsResponse: ITokenAnalyticsInputResponse = {
         output: {
-          content: result.text,
+          content: (result as any).object ? JSON.stringify((result as any).object) : (result as any).text,
           finishReason: mapFinishReason(result.finishReason),
         },
         usage: { input: result.usage.promptTokens, output: result.usage.completionTokens, total: result.usage.totalTokens },
@@ -168,7 +189,7 @@ export class LLMProxyService {
   }
 
   async *generateStreamingResponse(request: ILLMRequest): AsyncGenerator<ChatCompletionChunkDto, void, unknown> {
-    const { messages, model, temperature, user } = request;
+    const { messages, model, temperature, user, response_format } = request;
     
     // Resolve provider and model
     const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
@@ -201,15 +222,34 @@ export class LLMProxyService {
       // Convert messages to AI SDK format
       const aiSDKMessages = convertOpenAIMessagesToAISDK(request.messages);
       
-      // Use Vercel AI SDK to stream text
-      const result = await streamText({
+      // Common parameters for both text and object streaming
+      const baseParams = {
         model: selectedProvider(actualModel),
         messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
-        ...(aiSDKTools && { tools: aiSDKTools }),
-        ...(aiSDKToolChoice && { toolChoice: aiSDKToolChoice }),
-      });
+      };
+
+      let result;
+
+      // Check if structured output is requested
+      if (response_format?.type === 'json_schema') {
+        // Convert JSON schema to Zod schema
+        const zodSchema = jsonSchemaToZod(response_format.json_schema.schema);
+        
+        // Use streamObject for structured output
+        result = await streamObject({
+          ...baseParams,
+          schema: zodSchema,
+        });
+      } else {
+        // Use regular streamText for non-structured output
+        result = await streamText({
+          ...baseParams,
+          ...(aiSDKTools && { tools: aiSDKTools }),
+          ...(aiSDKToolChoice && { toolChoice: aiSDKToolChoice }),
+        });
+      }
 
       let fullContent = '';
       let inputTokens = 0;
