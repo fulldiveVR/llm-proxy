@@ -1,9 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { generateText, streamText, generateObject, streamObject, ToolSet, ToolChoice, CoreMessage } from "ai";
+import { generateText, streamText, generateObject, streamObject, embed, embedMany, ToolSet, ToolChoice, CoreMessage } from "ai";
 import { z } from 'zod';
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVertex } from "@ai-sdk/google-vertex";
+import { Buffer } from "buffer";
 import { TokenAnalyticsService } from "../token-analytics";
 import { 
   ILLMRequest, 
@@ -11,7 +12,9 @@ import {
   ChatCompletionChunkDto, 
   MessageDto,
   ChatMessageContent,
-  ModelProvider
+  ModelProvider,
+  IEmbeddingRequest,
+  EmbeddingResponseDto
 } from "./llm-proxy.models";
 import { LLMProxyConfig } from "./llm-proxy.config";
 import { ITokenAnalyticsInputRequest, ITokenAnalyticsInputResponse } from "../token-analytics";
@@ -303,6 +306,98 @@ export class LLMProxyService {
 
       await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
       
+      throw error;
+    }
+  }
+
+  /**
+   * Generate embeddings for the given request (OpenAI compatible)
+   */
+  async generateEmbeddings(request: IEmbeddingRequest): Promise<EmbeddingResponseDto> {
+    const { input, model, user, encoding_format } = request;
+
+    // Resolve provider and model
+    const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
+    const selectedProvider: any = this.getProvider(provider);
+
+    // Build AI SDK embedding model function
+    // Not all providers support embeddings; currently we default to OpenAI behaviour
+    const embeddingModelFn = selectedProvider.embedding
+      ? selectedProvider.embedding(actualModel)
+      : this.openaiProvider.embedding(actualModel);
+
+    // Prepare analytics session
+    const analyticsRequest: ITokenAnalyticsInputRequest = {
+      traceName: `LLM Embedding - ${provider}/${actualModel}`,
+      generationName: "llm-embedding",
+      userId: user || "anonymous",
+      model: actualModel,
+      input: Array.isArray(input)
+        ? (input as any[]).map((val, idx) => ({ role: `input-${idx}`, content: val as any }))
+        : [{ role: "input", content: input as any }],
+    };
+
+    const { trace, generation } = await this.tokenAnalytics.startSession(analyticsRequest);
+
+    try {
+      let embeddings: number[][] = [];
+      let tokensUsed = 0;
+
+      if (Array.isArray(input)) {
+        // Batch embedding
+        const { embeddings: batchEmbeddings, usage } = await embedMany({
+          model: embeddingModelFn,
+          values: input as any[],
+        });
+        embeddings = batchEmbeddings as number[][];
+        tokensUsed = usage?.tokens || 0;
+      } else {
+        // Single embedding
+        const { embedding: singleEmbedding, usage } = await embed({
+          model: embeddingModelFn,
+          value: input as any,
+        });
+        embeddings = [singleEmbedding as number[]];
+        tokensUsed = usage?.tokens || 0;
+      }
+
+      // Convert embeddings to base64 if requested
+      const formattedEmbeddings = encoding_format === "base64"
+        ? embeddings.map(vec => Buffer.from(new Float32Array(vec).buffer).toString('base64'))
+        : embeddings;
+
+      // Build OpenAI-compatible response
+      const response: EmbeddingResponseDto = {
+        object: "list",
+        model: actualModel,
+        data: formattedEmbeddings.map((emb, idx) => ({
+          object: "embedding",
+          index: idx,
+          embedding: emb as any,
+        })),
+        usage: {
+          prompt_tokens: tokensUsed,
+          total_tokens: tokensUsed,
+        },
+      } as EmbeddingResponseDto;
+
+      // End analytics
+      const analyticsResponse: ITokenAnalyticsInputResponse = {
+        output: { embeddings: response.data.length },
+        usage: { input: tokensUsed, output: 0, total: tokensUsed },
+      };
+
+      await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
+
+      return response;
+    } catch (error) {
+      this.logger.error(`Error generating embeddings: ${error.message}`);
+
+      const analyticsResponse: ITokenAnalyticsInputResponse = {
+        output: { error: error.message },
+        usage: { input: 0, output: 0, total: 0 },
+      };
+      await this.tokenAnalytics.endSession(trace, generation, analyticsResponse);
       throw error;
     }
   }

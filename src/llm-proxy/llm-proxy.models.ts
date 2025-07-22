@@ -14,6 +14,7 @@ import type {
   ResponseFormatJSONObject,
   ResponseFormatJSONSchema
 } from 'openai/resources/shared';
+import type { CreateEmbeddingResponse } from "openai/resources/embeddings";
 
 // OpenAI API compatible types
 export type ChatMessageContentItem = 
@@ -230,6 +231,63 @@ export class ChatCompletionResponseSwagger implements ChatCompletion {
   })
   service_tier?: "auto" | "default" | "flex" | null;
 }
+
+// ADD: Embedding models -----------------------------------------------------------------------------------------
+
+export type EmbeddingModel = 'text-embedding-ada-002' | 'text-embedding-3-small' | 'text-embedding-3-large' | (string & {});
+
+export class EmbeddingRequestDto {
+  @ApiProperty({
+    description: "Input text, token array, or array of either to embed. Cannot be empty.",
+    oneOf: [
+      { type: "string" },
+      {
+        type: "array",
+        items: { oneOf: [{ type: "string" }, { type: "array", items: { type: "number" } }, { type: "number" }] }
+      }
+    ]
+  })
+  input: string | Array<string> | Array<number> | Array<Array<number>>;
+
+  @ApiProperty({ description: "ID of the model to use for embeddings", example: "text-embedding-3-small" })
+  @IsString()
+  model: EmbeddingModel;
+
+  @ApiPropertyOptional({
+    description: "Number of dimensions for the resulting embeddings (text-embedding-3* only)",
+    minimum: 1
+  })
+  @IsOptional()
+  @IsNumber()
+  dimensions?: number;
+
+  @ApiPropertyOptional({ description: "Return format of the embeddings", enum: ["float", "base64"], example: "float" })
+  @IsOptional()
+  @IsString()
+  encoding_format?: "float" | "base64";
+
+  @ApiPropertyOptional({ description: "End-user identifier", example: "user-123" })
+  @IsOptional()
+  @IsString()
+  user?: string;
+
+  @ApiPropertyOptional({
+    description: "Provider to use for generation (internal use)",
+    enum: Object.values(ModelProvider)
+  })
+  @IsOptional()
+  provider?: ModelProvider;
+}
+
+// OpenAI-compatible embedding response types ---------------------------------------------------------------
+export type EmbeddingResponseDto = CreateEmbeddingResponse;
+
+// Internal interface for service layer
+export interface IEmbeddingRequest extends EmbeddingRequestDto {
+  user?: string; // ensured string user id
+}
+
+// -----------------------------------------------------------------------------------------
 
 // Internal interface for service layer (extends ChatCompletionRequestDto)
 export interface ILLMRequest extends ChatCompletionRequestDto {
