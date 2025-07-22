@@ -160,6 +160,9 @@ export function convertAISDKResultToOpenAI(
   model: string,
   id?: string
 ): ChatCompletionResponseDto {
+  // Handle structured output - if result has an 'object' property, it's structured output
+  const content = result.object ? JSON.stringify(result.object) : result.text;
+  
   return {
     id: id || generateChatCompletionId(),
     object: "chat.completion",
@@ -169,7 +172,7 @@ export function convertAISDKResultToOpenAI(
       index: 0,
       message: {
         role: "assistant",
-        content: result.text,
+        content: content,
         refusal: null,
         tool_calls: result.toolCalls?.map((call: any) => ({
           id: call.toolCallId,

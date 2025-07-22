@@ -1,14 +1,19 @@
-import { IsString, IsOptional, IsNumber, Min, Max, IsArray, ValidateNested, IsBoolean } from "class-validator";
+import { IsString, IsOptional, IsNumber, Min, Max, IsArray, ValidateNested, IsBoolean, IsObject } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import type { 
-  ChatCompletion, 
-  ChatCompletionChunk, 
+import type {
+  ChatCompletion,
+  ChatCompletionChunk,
   ChatCompletionMessage,
   ChatCompletionMessageToolCall,
   ChatCompletionTool,
   ChatCompletionToolChoiceOption
 } from 'openai/resources/chat/completions';
+import type {
+  ResponseFormatText,
+  ResponseFormatJSONObject,
+  ResponseFormatJSONSchema
+} from 'openai/resources/shared';
 
 // OpenAI API compatible types
 export type ChatMessageContentItem = 
@@ -23,6 +28,9 @@ export enum ModelProvider {
   Vertex = "vertex",
   OpenRouter = "openrouter"
 }
+
+// Use OpenAI's official response format types
+export type ResponseFormat = ResponseFormatText | ResponseFormatJSONObject | ResponseFormatJSONSchema;
 
 // OpenAI API compatible models
 export class MessageDto {
@@ -140,6 +148,30 @@ export class ChatCompletionRequestDto {
   })
   @IsOptional()
   tool_choice?: ChatCompletionToolChoiceOption;
+
+  @ApiPropertyOptional({
+    description: "Format for the response. Use 'json_schema' for structured output with a JSON schema.",
+    example: {
+      type: "json_schema",
+      json_schema: {
+        name: "math_response",
+        description: "A mathematical calculation result",
+        schema: {
+          type: "object",
+          properties: {
+            result: { type: "number" },
+            explanation: { type: "string" }
+          },
+          required: ["result", "explanation"],
+          additionalProperties: false
+        },
+        strict: true
+      }
+    }
+  })
+  @IsOptional()
+  @IsObject()
+  response_format?: ResponseFormat;
 }
 
 // Use official OpenAI types for responses
