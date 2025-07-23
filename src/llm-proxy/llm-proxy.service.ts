@@ -314,7 +314,7 @@ export class LLMProxyService {
    * Generate embeddings for the given request (OpenAI compatible)
    */
   async generateEmbeddings(request: IEmbeddingRequest): Promise<EmbeddingResponseDto> {
-    const { input, model, user, encoding_format } = request;
+    const { input, model, user, encoding_format, dimensions } = request;
 
     // Resolve provider and model
     const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
@@ -323,8 +323,8 @@ export class LLMProxyService {
     // Build AI SDK embedding model function
     // Not all providers support embeddings; currently we default to OpenAI behaviour
     const embeddingModelFn = selectedProvider.embedding
-      ? selectedProvider.embedding(actualModel)
-      : this.openaiProvider.embedding(actualModel);
+      ? selectedProvider.embedding(actualModel, dimensions ? { dimensions } : undefined)
+      : this.openaiProvider.embedding(actualModel, dimensions ? { dimensions } : undefined);
 
     // Prepare analytics session
     const analyticsRequest: ITokenAnalyticsInputRequest = {
