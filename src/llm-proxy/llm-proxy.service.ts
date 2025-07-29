@@ -5,6 +5,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVertex } from "@ai-sdk/google-vertex";
 import { Buffer } from "buffer";
+import OpenAI from 'openai';
 import { TokenAnalyticsService } from "../token-analytics";
 import { 
   ILLMRequest, 
@@ -37,6 +38,8 @@ export class LLMProxyService {
   private readonly anthropicProvider;
   private readonly vertexProvider;
   private readonly openrouterProvider;
+  // Direct OpenAI clients for structured output
+  private readonly openrouterClient: OpenAI;
 
   constructor(
     private config: LLMProxyConfig,
@@ -64,6 +67,11 @@ export class LLMProxyService {
 
     // OpenRouter uses OpenAI-compatible API but with different base URL
     this.openrouterProvider = createOpenAI({
+      apiKey: this.config.openrouter.apiKey,
+      baseURL: this.config.openrouter.baseUrl,
+    });
+
+    this.openrouterClient = new OpenAI({
       apiKey: this.config.openrouter.apiKey,
       baseURL: this.config.openrouter.baseUrl,
     });
@@ -144,14 +152,56 @@ export class LLMProxyService {
 
       // Check if structured output is requested
       if (response_format?.type === 'json_schema') {
-        // Convert JSON schema to Zod schema
-        const zodSchema = jsonSchemaToZod(response_format.json_schema.schema);
-        
-        // Use generateObject for structured output
-        result = await generateObject({
-          ...baseParams,
-          schema: zodSchema,
-        });
+        // For OpenAI and OpenRouter providers, use direct OpenAI client for better structured output support
+        if (provider === ModelProvider.OpenRouter) {
+          this.logger.log(`Using direct OpenAI client for structured output with ${provider}/${actualModel}`);
+          
+          const openaiClient = this.openrouterClient;
+          
+          const openaiResponse = await openaiClient.chat.completions.create({
+            model: actualModel,
+            messages: request.messages as any,
+            temperature: request.temperature,
+            max_tokens: request.max_tokens,
+            response_format: response_format as any,
+            ...(request.tools && { tools: request.tools }),
+            ...(request.tool_choice && { tool_choice: request.tool_choice }),
+          });
+
+          // Convert OpenAI response to our expected format
+          const content = openaiResponse.choices[0].message.content || '';
+          let parsedObject = null;
+          
+          try {
+            parsedObject = content ? JSON.parse(content) : null;
+          } catch (parseError) {
+            this.logger.warn(`Failed to parse JSON from structured output: ${parseError.message}. Content: ${content}`);
+            parsedObject = null;
+          }
+
+          result = {
+            text: content,
+            object: parsedObject,
+            finishReason: openaiResponse.choices[0].finish_reason,
+            usage: {
+              promptTokens: openaiResponse.usage?.prompt_tokens || 0,
+              completionTokens: openaiResponse.usage?.completion_tokens || 0,
+              totalTokens: openaiResponse.usage?.total_tokens || 0,
+            },
+            toolCalls: openaiResponse.choices[0].message.tool_calls?.map(call => ({
+              toolCallId: call.id,
+              toolName: call.function.name,
+              args: JSON.parse(call.function.arguments),
+            })),
+          };
+        } else {
+          // Fallback to AI SDK for other providers
+          const zodSchema = jsonSchemaToZod(response_format.json_schema.schema);
+          result = await generateObject({
+            ...baseParams,
+            schema: zodSchema,
+          });
+        }
       } else {
         // Use regular generateText for non-structured output
         result = await generateText({
