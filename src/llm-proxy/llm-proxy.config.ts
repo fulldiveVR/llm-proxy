@@ -55,9 +55,42 @@ export class LLMProxyConfig implements ILLMProxyConfig {
   }
 
   get specialUsers() {
+    // Get raw config values
+    const rawUserIds = this.config.get<any>("llmProxy.specialUsers.userIds");
+    const rawAllowedModels = this.config.get<any>("llmProxy.specialUsers.allowedModels");
+
+    // Parse userIds
+    let userIds: string[] = [];
+    if (Array.isArray(rawUserIds)) {
+      userIds = rawUserIds;
+    } else if (typeof rawUserIds === 'string') {
+      try {
+        userIds = JSON.parse(rawUserIds);
+      } catch (e) {
+        console.error('Failed to parse userIds as JSON:', e);
+        userIds = rawUserIds.split(',').map(id => id.trim());
+      }
+    }
+
+    // Parse allowedModels
+    let allowedModels: string[] = ["openrouter/google/gemma-3-4b-it", "text-embedding-3-small"];
+    if (Array.isArray(rawAllowedModels)) {
+      allowedModels = rawAllowedModels;
+    } else if (typeof rawAllowedModels === 'string') {
+      try {
+        allowedModels = JSON.parse(rawAllowedModels);
+      } catch (e) {
+        console.error('Failed to parse allowedModels as JSON:', e);
+        allowedModels = rawAllowedModels.split(',').map(model => model.trim());
+      }
+    }
+
+    console.log('Parsed userIds:', userIds);
+    console.log('Parsed allowedModels:', allowedModels);
+
     return {
-      userIds: this.config.get<string[]>("llmProxy.specialUsers.userIds") || [],
-      allowedModels: this.config.get<string[]>("llmProxy.specialUsers.allowedModels") || ["openrouter/google/gemma-3-4b-it", "text-embedding-3-small"],
+      userIds,
+      allowedModels,
     };
   }
 }

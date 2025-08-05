@@ -19,7 +19,7 @@ llmProxy:
   specialUsers:
     # Users who bypass credit checks but have model restrictions
     userIds: ["6RTphk_zM"]  # Add special user IDs here, e.g., ["user123", "user456"]
-    allowedModels: ["openrouter/google/gemma-3-4b-it", "text-embedding-3-small"]
+    allowedModels: ["openrouter/google/gemma-3-4b-it", "text-embedding-3-small", "gpt-3.5-turbo"]
 
 tokenAnalytics:
   langfuse:

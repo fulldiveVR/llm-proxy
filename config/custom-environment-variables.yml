@@ -19,12 +19,8 @@ llmProxy:
     apiKey: OPENROUTER_API_KEY
     baseUrl: OPENROUTER_BASE_URL
   specialUsers:
-    userIds: 
-      __name: SPECIAL_USER_IDS
-      __format: json
-    allowedModels:
-      __name: SPECIAL_ALLOWED_MODELS
-      __format: json
+    userIds: SPECIAL_USER_IDS
+    allowedModels: SPECIAL_ALLOWED_MODELS
 
 tokenAnalytics:
   langfuse:
