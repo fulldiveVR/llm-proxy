@@ -16,11 +16,15 @@ export interface ILLMProxyConfig {
     apiKey: string;
     baseUrl?: string;
   };
+  specialUsers: {
+    userIds: string[];
+    allowedModels: string[];
+  };
 }
 
 @Injectable()
 export class LLMProxyConfig implements ILLMProxyConfig {
-  constructor(private readonly config: IConfig) {}
+  constructor(private readonly config: IConfig) { }
 
   get openai() {
     return {
@@ -47,6 +51,13 @@ export class LLMProxyConfig implements ILLMProxyConfig {
     return {
       apiKey: this.config.get<string>("llmProxy.openrouter.apiKey"),
       baseUrl: this.config.get<string>("llmProxy.openrouter.baseUrl") || "https://openrouter.ai/api/v1",
+    };
+  }
+
+  get specialUsers() {
+    return {
+      userIds: this.config.get<string[]>("llmProxy.specialUsers.userIds") || [],
+      allowedModels: this.config.get<string[]>("llmProxy.specialUsers.allowedModels") || ["openrouter/google/gemma-3-4b-it", "text-embedding-3-small"],
     };
   }
 }

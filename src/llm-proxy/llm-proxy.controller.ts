@@ -2,15 +2,15 @@ import { Body, Controller, Get, Post, Res, HttpStatus, Logger, Headers } from "@
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
-import { 
-  ChatCompletionRequestDto, 
+import {
+  ChatCompletionRequestDto,
   ChatCompletionResponseSwagger,
-  ILLMRequest, 
+  ILLMRequest,
   ModelProvider,
-  
+
 } from "./llm-proxy.models";
 import { AuthorizedUser, AuthUser } from "../auth";
-import { UseAuthAndCreditsGuard } from "../credits/credits.guard";
+import { UseAuthAndSpecialUserCreditsGuard } from "../credits";
 
 @ApiTags("OpenAI API Compatible")
 @Controller("v1/chat")
@@ -26,15 +26,15 @@ export class LLMProxyController {
   @ApiResponse({ status: 200, description: "Service is healthy" })
   @ApiResponse({ status: 401, description: "Unauthorized - Invalid or missing API key" })
   healthCheck() {
-    return { 
-      status: "ok", 
+    return {
+      status: "ok",
       timestamp: new Date().toISOString(),
       service: "llm-proxy"
     };
   }
 
   @Post("completions")
-  @UseAuthAndCreditsGuard()
+  @UseAuthAndSpecialUserCreditsGuard()
   @ApiOperation({
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
@@ -55,7 +55,7 @@ export class LLMProxyController {
   })
   @ApiResponse({
     status: 403,
-    description: "Forbidden - User has no active credits"
+    description: "Forbidden - User has no active credits or special user using disallowed model"
   })
   @ApiResponse({
     status: 500,
@@ -69,11 +69,11 @@ export class LLMProxyController {
   ): Promise<void> {
     try {
       const isStreaming = requestDto.stream || false;
-      
+
       // Log incoming request
       const effectiveProvider = xProvider || requestDto.provider;
       this.logger.log(`Incoming chat completion request: user=${user.id}, model=${requestDto.model}, provider=${effectiveProvider || 'auto'}, messages=${requestDto.messages?.length || 0}, streaming=${isStreaming}, max_tokens=${requestDto.max_tokens}, temperature=${requestDto.temperature}`);
-      
+
       // Prepare request for the service
       const request: ILLMRequest = {
         ...requestDto,
@@ -91,13 +91,13 @@ export class LLMProxyController {
 
         try {
           const streamGenerator = this.llmProxyService.generateStreamingResponse(request);
-          
+
           // Stream each chunk in OpenAI format
           for await (const chunk of streamGenerator) {
             const formattedChunk = `data: ${JSON.stringify(chunk)}\n\n`;
             res.write(formattedChunk);
           }
-          
+
           // End the stream
           res.write("data: [DONE]\n\n");
           res.end();
@@ -105,7 +105,7 @@ export class LLMProxyController {
           res.write(`data: {"error": {"message": "${error.message}", "type": "server_error"}}\n\n`);
           res.end();
         }
-      } 
+      }
       // Handle non-streaming response
       else {
         const response = await this.llmProxyService.generateResponse(request);

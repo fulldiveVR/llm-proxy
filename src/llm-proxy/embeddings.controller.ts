@@ -4,22 +4,22 @@ import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
 import { EmbeddingRequestDto, IEmbeddingRequest, ModelProvider } from "./llm-proxy.models";
 import { AuthorizedUser, AuthUser } from "../auth";
-import { UseAuthAndCreditsGuard } from "../credits/credits.guard";
+import { UseAuthAndSpecialUserCreditsGuard } from "../credits";
 
 @ApiTags("OpenAI API Compatible")
 @Controller("v1")
 export class EmbeddingsController {
   private readonly logger = new Logger(EmbeddingsController.name);
 
-  constructor(private readonly llmProxyService: LLMProxyService) {}
+  constructor(private readonly llmProxyService: LLMProxyService) { }
 
   @Post("embeddings")
-  @UseAuthAndCreditsGuard()
+  @UseAuthAndSpecialUserCreditsGuard()
   @ApiOperation({ summary: "Create embeddings" })
   @ApiResponse({ status: 200, description: "Embeddings created successfully" })
   @ApiResponse({ status: 400, description: "Invalid request parameters" })
   @ApiResponse({ status: 401, description: "Unauthorized - Invalid or missing API key" })
-  @ApiResponse({ status: 403, description: "Forbidden - User has no active credits" })
+  @ApiResponse({ status: 403, description: "Forbidden - User has no active credits or special user using disallowed model" })
   @ApiResponse({ status: 500, description: "Internal server error" })
   async createEmbeddings(
     @Body() requestDto: EmbeddingRequestDto,
