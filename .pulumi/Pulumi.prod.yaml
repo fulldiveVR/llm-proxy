@@ -1,0 +1,63 @@
+secretsprovider: gcpkms://projects/ai-asia-382012/locations/global/keyRings/ai-wayz-pulumi-2002051/cryptoKeys/ai-wayz-pulumi-e9ef33c
+encryptedkey: CiQAZ+DZAZuoLwekn6JgbPs+JCRRUpV1xIVobe0JbO3xTgjZHT4SSQDNyZeb3rKAR9xLaBS3x9nRwoViEkfpFBpTF5+S6fQ8sRGlcJ4fb72Dii6v5b6CdAfeCjLhM1Fjt78RRW8gtlxxVDunY5CsThA=
+config:
+  llm-proxy:base-stack:
+    clusterName: primary-dev
+    stackName: organization/ai-wayz-infrastructure/dev
+  llm-proxy:buckets: {}
+  llm-proxy:discord-alerts:
+    webhookId: "1106571237037191309"
+  llm-proxy:service:
+    k8s:
+      domain: llm-proxy.aiwayz.com
+      env:
+        VERTEX_PROJECT_ID: "ai-asia-382012"
+        VERTEX_LOCATION: "us-central1"
+        VERTEX_CLIENT_EMAIL: "vertex-prod@ai-asia-382012.iam.gserviceaccount.com"
+        LANGFUSE_BASE_URL: "https://ai-stats.aiwize.com/"
+        OPENROUTER_BASE_URL: "https://openrouter.ai/api/v1"
+        SPECIAL_USER_IDS: '["6RTphk_zM"]'
+        SPECIAL_ALLOWED_MODELS: '["openrouter/google/gemma-3-4b-it", "text-embedding-3-small", "gpt-3.5-turbo"]'
+      image: asia.gcr.io/ai-asia-382012/llm-proxy:latest
+      resources:
+        limits:
+          cpu: "100m"
+          ephemeral-storage: "8Gi"
+          memory: "1Gi"
+        requests:
+          cpu: "4m"
+          ephemeral-storage: "4Gi"
+          memory: "200Mi"
+      port: 8080
+      secretEnv:
+        OPENAI_API_KEY: open-ai-api-key
+        ANTHROPIC_API_KEY: anthropic-api-key
+        VERTEX_PRIVATE_KEY: vertex-private-key
+        LANGFUSE_SECRET_KEY: langfuse-secret-key
+        LANGFUSE_PUBLIC_KEY: langfuse-public-key
+        OPENROUTER_API_KEY: openrouter-api-key
+        JWT_SECRET: jwt-secret
+        RABBITMQ_URI: rabbitmq-uri
+    mongo:
+      databases:
+        - dbName: llm-proxy
+          username: llm-proxy
+    name: llm-proxy
+  llm-proxy:telegram:
+    defaultChatId: "-985701161"
+  llm-proxy:jwt-secret:
+    secure: v1:msK71OAcWiyaTbLw:bHK1j1poADdBmLRzJvx7b/sMRY7OTBMiYDqhg0oO/ZGhT8jTYWLeB9d90HbPGg==
+  llm-proxy:langfuse-public-key:
+    secure: v1:Yy0nAgn+Tx9Sf3y+:/aPJ5ad4pLlgdrRC/sb7zmSy12uyXYiusybsQ50EDu408MMDPL6GY2G2NL3R58kEo11hrrEIMOIeLg==
+  llm-proxy:langfuse-secret-key:
+    secure: v1:aeQsTDTdJWLvUUwc:c0hgVmgef5dNCCQG5RKDJcwgrUV+P6yzDDJ5ZuKWyjb5juWxu0UN3n7gBWIWLRBJTPq2X96YKL7TlA==
+  llm-proxy:vertex-private-key:
+    secure: v1:t6qsp1rODtBAdMAh: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
+  llm-proxy:open-ai-api-key:
+    secure: v1:w06EBGEZ+BNNYlu5:eHvvOwPaAL5S25VVhrm6IUjziZXO6k+y76GMPN9AOAYGSF2toPXPxY2V6pGuU5x0uChzpzXs4Mkl5YjSBxzRp5fsI+r+DIGSzM0pvvaTpU4zWju6nSV7iHJd3bEuxUqXkC3cavygykYvLiqOM3sFXpI1AhyYAIKBwJAKnkBtVR9pALcVFBdT9fHiErqr2Icybh65Uo/M1YRD+p9wnNoahbBOI+KT1oJa4kO1Nvp1vJCm3Flk
+  llm-proxy:anthropic-api-key:
+    secure: v1:S8VPtv6jWZgB6DPg:tOYEQWI2dualNXEIEcfJ8aPcYn32KGbZtJsLXFaX05Z1SuElZHx1fPIvKDoKFT+jg62oplSnIuFeD4J8baQRLJ6+14lQ6Qi5nvdWXsXYy6fsIqdPe8MUdUFjXl54/IXGSCWUj/bX+nKvFbGwo1AMAX9kR72n9y3V1LbmrA==
+  llm-proxy:openrouter-api-key:
+    secure: v1:o2p0Il1cexrUKqWD:3DJKD2ZLccB6ZJu1dD62YU6QtNVgVuCkCEczbSUumilDQmmUndivkBK8MqZBlDoyNXe119PYBGE00p8b2IcYSwY7R8Gt3ZS+vL+d9uiDWmoxTbN7Z60J3ck=
+  llm-proxy:discord-alerts-token:
+    secure: v1:uCqRodesNVgw2Bbt:mvVQ8i9KNdiE61l1xqb+nS6movc7jE/RUzXXFbuW9lwK1kTUqII8hMzZdW4+54cZskJDWfky3oMz6prNsb2OOOIXOruqbIQ/9SBLoVMA/sKra8zX
