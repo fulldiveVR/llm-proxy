@@ -61,3 +61,5 @@ config:
     secure: v1:o2p0Il1cexrUKqWD:3DJKD2ZLccB6ZJu1dD62YU6QtNVgVuCkCEczbSUumilDQmmUndivkBK8MqZBlDoyNXe119PYBGE00p8b2IcYSwY7R8Gt3ZS+vL+d9uiDWmoxTbN7Z60J3ck=
   llm-proxy:discord-alerts-token:
     secure: v1:uCqRodesNVgw2Bbt:mvVQ8i9KNdiE61l1xqb+nS6movc7jE/RUzXXFbuW9lwK1kTUqII8hMzZdW4+54cZskJDWfky3oMz6prNsb2OOOIXOruqbIQ/9SBLoVMA/sKra8zX
+  llm-proxy:rabbitmq-uri:
+    secure: v1:esgiVidj76AXdf5X:/ryo0Qaws4tJrS9KyQeyHhpc0X0aMh95ixH/Rl/ewb3ARe7GyFcPk4XHaFG2b6pfPnThJEq3TH7rUixO5CJElWh0YoaQ8G5nBQp32UaP8/hycxREFbIJCMSYbLvZ3bBdUT4GzXfvK7/5MQCsRdI=
