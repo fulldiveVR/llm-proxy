@@ -9,7 +9,7 @@ config:
     webhookId: "1106571237037191309"
   llm-proxy:service:
     k8s:
-      domain: llm-proxy.aiwayz.com
+      domain: llm-proxy.aiwize.com
       env:
         VERTEX_PROJECT_ID: "ai-asia-382012"
         VERTEX_LOCATION: "us-central1"
