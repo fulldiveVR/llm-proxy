@@ -4,7 +4,7 @@ import { Response } from "express";
 import { LLMProxyService } from "./llm-proxy.service";
 import { EmbeddingRequestDto, IEmbeddingRequest, ModelProvider } from "./llm-proxy.models";
 import { AuthorizedUser, AuthUser } from "../auth";
-import { UseAuthAndSpecialUserCreditsGuard } from "../credits";
+import { UseAuthAndCreditsByModelsGuard } from "../credits";
 
 @ApiTags("OpenAI API Compatible")
 @Controller("v1")
@@ -14,7 +14,7 @@ export class EmbeddingsController {
   constructor(private readonly llmProxyService: LLMProxyService) { }
 
   @Post("embeddings")
-  @UseAuthAndSpecialUserCreditsGuard()
+  @UseAuthAndCreditsByModelsGuard()
   @ApiOperation({ summary: "Create embeddings" })
   @ApiResponse({ status: 200, description: "Embeddings created successfully" })
   @ApiResponse({ status: 400, description: "Invalid request parameters" })
