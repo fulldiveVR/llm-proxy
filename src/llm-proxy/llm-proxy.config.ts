@@ -16,8 +16,7 @@ export interface ILLMProxyConfig {
     apiKey: string;
     baseUrl?: string;
   };
-  specialUsers: {
-    userIds: string[];
+  freeModels: {
     allowedModels: string[];
   };
 }
@@ -54,23 +53,9 @@ export class LLMProxyConfig implements ILLMProxyConfig {
     };
   }
 
-  get specialUsers() {
+  get freeModels() {
     // Get raw config values
-    const rawUserIds = this.config.get<any>("llmProxy.specialUsers.userIds");
-    const rawAllowedModels = this.config.get<any>("llmProxy.specialUsers.allowedModels");
-
-    // Parse userIds
-    let userIds: string[] = [];
-    if (Array.isArray(rawUserIds)) {
-      userIds = rawUserIds;
-    } else if (typeof rawUserIds === 'string') {
-      try {
-        userIds = JSON.parse(rawUserIds);
-      } catch (e) {
-        console.error('Failed to parse userIds as JSON:', e);
-        userIds = rawUserIds.split(',').map(id => id.trim());
-      }
-    }
+    const rawAllowedModels = this.config.get<any>("llmProxy.freeModels");
 
     // Parse allowedModels
     let allowedModels: string[] = ["openrouter/google/gemma-3-4b-it", "text-embedding-3-small"];
@@ -85,11 +70,9 @@ export class LLMProxyConfig implements ILLMProxyConfig {
       }
     }
 
-    console.log('Parsed userIds:', userIds);
-    console.log('Parsed allowedModels:', allowedModels);
+    console.log('Parsed free allowedModels:', allowedModels);
 
     return {
-      userIds,
       allowedModels,
     };
   }

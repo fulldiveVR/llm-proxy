@@ -5,7 +5,7 @@ import { EmbeddingsController } from "./embeddings.controller";
 import { LLMProxyConfig } from "./llm-proxy.config";
 import { TokenAnalyticsModule } from "../token-analytics";
 import { AuthGuard } from "../auth";
-import { SpecialUserCreditsGuard } from "../credits";
+import { CreditsByModelsGuard } from "../credits";
 
 @Module({
   imports: [TokenAnalyticsModule],
@@ -14,7 +14,7 @@ import { SpecialUserCreditsGuard } from "../credits";
     LLMProxyConfig,
     LLMProxyService,
     AuthGuard,
-    SpecialUserCreditsGuard,
+    CreditsByModelsGuard,
   ],
   exports: [LLMProxyService],
 })

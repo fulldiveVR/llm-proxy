@@ -10,7 +10,7 @@ import {
 
 } from "./llm-proxy.models";
 import { AuthorizedUser, AuthUser } from "../auth";
-import { UseAuthAndSpecialUserCreditsGuard } from "../credits";
+import { UseAuthAndCreditsByModelsGuard } from "../credits";
 
 @ApiTags("OpenAI API Compatible")
 @Controller("v1/chat")
@@ -34,7 +34,7 @@ export class LLMProxyController {
   }
 
   @Post("completions")
-  @UseAuthAndSpecialUserCreditsGuard()
+  @UseAuthAndCreditsByModelsGuard()
   @ApiOperation({
     summary: "Create a chat completion",
     description: "Creates a completion for the chat message"
