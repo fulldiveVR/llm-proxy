@@ -16,7 +16,7 @@ config:
         VERTEX_CLIENT_EMAIL: "vertex-staging@ai-east.iam.gserviceaccount.com"
         LANGFUSE_BASE_URL: "https://ai-stats.aiwayz.com/"
         OPENROUTER_BASE_URL: "https://openrouter.ai/api/v1"
-        SPECIAL_ALLOWED_MODELS: '["openrouter/google/gemma-3-4b-it", "text-embedding-3-small", "gpt-3.5-turbo"]'
+        SPECIAL_ALLOWED_MODELS: '["openrouter/google/gemma-3-4b-it", "text-embedding-3-small", "gpt-3.5-turbo", "gpt-4o-mini"]'
       image: asia.gcr.io/ai-east/llm-proxy:latest
       resources:
         limits:

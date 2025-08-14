@@ -16,7 +16,7 @@ llmProxy:
   openrouter:
     apiKey: "your-openrouter-api-key"
     baseUrl: "https://openrouter.ai/api/v1"
-  freeModels: ["openrouter/google/gemma-3-4b-it", "text-embedding-3-small", "gpt-3.5-turbo"]
+  freeModels: ["openrouter/google/gemma-3-4b-it", "text-embedding-3-small", "gpt-3.5-turbo", "gpt-4o-mini"]
 
 tokenAnalytics:
   langfuse:
