@@ -59,7 +59,7 @@ mongodb:
 
 rmq:
   connection:
-    uri: "amqp://guest:guest@localhost:5672/"
+    uri: "amqp://admin:admin@localhost:5672/"
     name: "llm-proxy"
   exchanges:
     - name: "fanout.auth.user.created"

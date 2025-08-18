@@ -213,6 +213,7 @@ export class LLMProxyService {
           ...(aiSDKToolChoice && { toolChoice: aiSDKToolChoice }),
         });
       }
+      console.log("generateResponse result", result);
 
       // Format response in OpenAI API format
       const response = convertAISDKResultToOpenAI(result, actualModel);
