@@ -115,16 +115,20 @@ export class LLMProxyService {
       const candidateClient = this.getProvider(candidateInfo.provider);
 
       try {
-        response = await candidateClient.chat.completions.create({
+        const requestParams = {
           model: candidateInfo.model,
           messages: messages as any,
           temperature,
           max_tokens,
           ...(tools && { tools }),
           ...(tool_choice && { tool_choice }),
-          ...(response_format && { response_format }),
+          ...(response_format && { response_format, structured_outputs: true }),
           ...(candidateInfo.openrouterCustomProvider && { provider: candidateInfo.openrouterCustomProvider }),
-        }) as ChatCompletionResponseDto;
+        }
+
+
+        response = await candidateClient.chat.completions.create(requestParams) as ChatCompletionResponseDto;
+        console.log("Response", response);
         break; // success
       } catch (err) {
         this.logger.warn(`Generation with model ${candidateInfo.model} (provider: ${candidateInfo.provider}) failed: ${err.message}`);
@@ -205,7 +209,7 @@ export class LLMProxyService {
           stream: true,
           ...(tools && { tools }),
           ...(tool_choice && { tool_choice }),
-          ...(response_format && { response_format }),
+          ...(response_format && { response_format, structured_outputs: true }),
           ...(candidateInfo.openrouterCustomProvider && { provider: candidateInfo.openrouterCustomProvider }),
         }) as unknown as AsyncIterable<ChatCompletionChunkDto>;
         if (stream) break;
