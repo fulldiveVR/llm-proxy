@@ -530,3 +530,4 @@ curl -X POST http://localhost:3000/v1/chat/completions \
 2. Verify endpoint: `curl http://localhost:3000/health`
 3. Test with OpenAI client: Use official OpenAI SDK with proxy base URL
 4. Validate request format: Ensure JSON matches OpenAI API specification
+

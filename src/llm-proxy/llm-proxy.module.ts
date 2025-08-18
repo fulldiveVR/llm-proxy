@@ -6,6 +6,7 @@ import { LLMProxyConfig } from "./llm-proxy.config";
 import { TokenAnalyticsModule } from "../token-analytics";
 import { AuthGuard } from "../auth";
 import { CreditsByModelsGuard } from "../credits";
+import { ModelsRepository } from "../models/models.repository";
 
 @Module({
   imports: [TokenAnalyticsModule],
@@ -13,6 +14,7 @@ import { CreditsByModelsGuard } from "../credits";
   providers: [
     LLMProxyConfig,
     LLMProxyService,
+    ModelsRepository,
     AuthGuard,
     CreditsByModelsGuard,
   ],

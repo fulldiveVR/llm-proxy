@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { generateText, streamText, generateObject, streamObject, embed, embedMany, ToolSet, ToolChoice, CoreMessage } from "ai";
-import { z } from 'zod';
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createVertex } from "@ai-sdk/google-vertex";
@@ -11,8 +10,6 @@ import {
   ILLMRequest, 
   ChatCompletionResponseDto, 
   ChatCompletionChunkDto, 
-  MessageDto,
-  ChatMessageContent,
   ModelProvider,
   IEmbeddingRequest,
   EmbeddingResponseDto
@@ -30,6 +27,7 @@ import {
   extractModelAndProvider
 } from "../utils";
 import { jsonSchemaToZod } from "../utils/json-schema-to-zod";
+import { ModelsRepository } from "../models/models.repository";
 
 @Injectable()
 export class LLMProxyService {
@@ -43,7 +41,8 @@ export class LLMProxyService {
 
   constructor(
     private config: LLMProxyConfig,
-    private tokenAnalytics: TokenAnalyticsService
+    private tokenAnalytics: TokenAnalyticsService,
+    private modelsRepository: ModelsRepository,
   ) {
     this.logger.log('✅ LLM Proxy Service initialized successfully');
     this.openaiProvider = createOpenAI({
@@ -95,24 +94,26 @@ export class LLMProxyService {
   /**
    * Resolve provider and model from request
    */
-  private resolveProviderAndModel(model: string, requestProvider?: ModelProvider) {
-    if (requestProvider) {
-      return { provider: requestProvider, model };
+  private async resolveProviderAndModel(modelId: string, requestProvider?: ModelProvider) {
+    // Fetch model definition from MongoDB
+    const dbModel = await this.modelsRepository.getById(modelId);
+ 
+    if (!dbModel) {
+      throw new Error(`Model "${modelId}" not found`);
     }
-    
-    const extracted = extractModelAndProvider(model);
-
+ 
     return {
-      provider: (extracted.provider as ModelProvider),
-      model: extracted.model
+      provider: dbModel.provider,
+      model: dbModel.id,
+      openrouterCustomProvider: dbModel.openrouterCustomProvider,
+      fallbackModels: dbModel.fallbackModels,
     };
   }
 
   async generateResponse(request: ILLMRequest): Promise<ChatCompletionResponseDto> {
     const { messages, model, temperature, max_tokens, user, tools, tool_choice, response_format } = request;
     
-    // Resolve provider and model
-    const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
+    const { provider, model: actualModel, openrouterCustomProvider, fallbackModels } = await this.resolveProviderAndModel(model, request.provider);
     const selectedProvider = this.getProvider(provider);
 
     // Start analytics session
@@ -143,9 +144,11 @@ export class LLMProxyService {
       // Common parameters for both text and object generation
       const baseParams = {
         model: selectedProvider(actualModel),
+        models: fallbackModels,
         messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
+        provider: openrouterCustomProvider
       };
 
       let result;
@@ -245,7 +248,10 @@ export class LLMProxyService {
     const { messages, model, temperature, user, response_format } = request;
     
     // Resolve provider and model
-    const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
+    const { provider, model: actualModel, openrouterCustomProvider, fallbackModels } = await this.resolveProviderAndModel(model, request.provider);
+
+
+    
     const selectedProvider = this.getProvider(provider);
 
     // Start analytics session
@@ -278,9 +284,11 @@ export class LLMProxyService {
       // Common parameters for both text and object streaming
       const baseParams = {
         model: selectedProvider(actualModel),
+        models: fallbackModels,
         messages: aiSDKMessages,
         temperature: request.temperature,
         maxTokens: request.max_tokens,
+        provider: openrouterCustomProvider
       };
 
       let result;
@@ -367,7 +375,7 @@ export class LLMProxyService {
     const { input, model, user, encoding_format, dimensions } = request;
 
     // Resolve provider and model
-    const { provider, model: actualModel } = this.resolveProviderAndModel(model, request.provider);
+    const { provider, model: actualModel, openrouterCustomProvider, fallbackModels } = await this.resolveProviderAndModel(model, request.provider);
     const selectedProvider: any = this.getProvider(provider);
 
     // Build AI SDK embedding model function
