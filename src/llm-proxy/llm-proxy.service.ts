@@ -16,7 +16,7 @@ import { ITokenAnalyticsInputRequest, ITokenAnalyticsInputResponse } from "../to
 import {
   mapFinishReason,
 } from "../utils";
-import { jsonSchemaToZod } from "../utils/json-schema-to-zod";
+// import { jsonSchemaToZod } from "../utils/json-schema-to-zod"; // removed with OpenAI direct integration
 import { ModelsRepository } from "../models/models.repository";
 
 @Injectable()
@@ -75,7 +75,6 @@ export class LLMProxyService {
     const { messages, model, temperature, max_tokens, user, tools, tool_choice, response_format } = request;
     
     const { provider, model: actualModel, fallbackModels, openrouterCustomProvider } = await this.resolveProviderAndModel(model, request.provider);
-    const client = this.getProvider(provider);
 
     // Start analytics session
     const analyticsRequest: ITokenAnalyticsInputRequest = {
@@ -92,30 +91,44 @@ export class LLMProxyService {
 
     const { trace, generation } = await this.tokenAnalytics.startSession(analyticsRequest);
 
-    // Combine primary model with fallbacks
-    const candidateModels = [actualModel, ...(fallbackModels || [])];
-
     let response: ChatCompletionResponseDto | null = null;
     let lastError: any;
-    for (const candidate of candidateModels) {
+
+    const candidateModels = [model, ...(fallbackModels || [])];
+
+    for (let idx = 0; idx < candidateModels.length; idx++) {
+      let candidateInfo;
+
+      if (idx === 0) {
+        // We already resolved these for the primary request
+        candidateInfo = { provider, model: actualModel, openrouterCustomProvider };
+      } else {
+        try {
+          candidateInfo = await this.resolveProviderAndModel(candidateModels[idx]);
+        } catch (err) {
+          this.logger.warn(`Unable to resolve model ${candidateModels[idx]}: ${err.message}`);
+          lastError = err;
+          continue;
+        }
+      }
+
+      const candidateClient = this.getProvider(candidateInfo.provider);
+
       try {
-        response = await client.chat.completions.create({
-          model: candidate,
-        // @ts-ignore
-          models: fallbackModels,
+        response = await candidateClient.chat.completions.create({
+          model: candidateInfo.model,
           messages: messages as any,
           temperature,
-          provider: openrouterCustomProvider,
           max_tokens,
           ...(tools && { tools }),
           ...(tool_choice && { tool_choice }),
           ...(response_format && { response_format }),
+          ...(candidateInfo.openrouterCustomProvider && { provider: candidateInfo.openrouterCustomProvider }),
         }) as ChatCompletionResponseDto;
         break; // success
       } catch (err) {
-        this.logger.warn(`Model ${candidate} failed with error: ${err.message}`);
+        this.logger.warn(`Generation with model ${candidateInfo.model} (provider: ${candidateInfo.provider}) failed: ${err.message}`);
         lastError = err;
-        continue; // try next fallback model
       }
     }
 
@@ -150,7 +163,6 @@ export class LLMProxyService {
     const { messages, model, temperature, max_tokens, user, tools, tool_choice, response_format } = request;
     
     const { provider, model: actualModel, fallbackModels, openrouterCustomProvider } = await this.resolveProviderAndModel(model, request.provider);
-    const client = this.getProvider(provider);
 
     const analyticsRequest: ITokenAnalyticsInputRequest = {
       traceName: `LLM Streaming - ${provider}/${actualModel}`,
@@ -162,33 +174,44 @@ export class LLMProxyService {
     };
     const { trace, generation } = await this.tokenAnalytics.startSession(analyticsRequest);
 
-    // Attempt primary + fallback models for streaming
-    const candidateModels = [actualModel, ...(fallbackModels || [])];
     let stream: AsyncIterable<ChatCompletionChunkDto> | null = null;
     let lastError: any;
-    let usedModel = actualModel;
 
-    for (const candidate of candidateModels) {
+    const candidateModels = [model, ...(fallbackModels || [])];
+
+    for (let idx = 0; idx < candidateModels.length; idx++) {
+      let candidateInfo;
+
+      if (idx === 0) {
+        candidateInfo = { provider, model: actualModel, openrouterCustomProvider };
+      } else {
+        try {
+          candidateInfo = await this.resolveProviderAndModel(candidateModels[idx]);
+        } catch (err) {
+          this.logger.warn(`Unable to resolve model ${candidateModels[idx]}: ${err.message}`);
+          lastError = err;
+          continue;
+        }
+      }
+
+      const candidateClient = this.getProvider(candidateInfo.provider);
+
       try {
-        // @ts-ignore
-        stream = await client.chat.completions.create({
-          model: candidate,
-          models: fallbackModels,
+        stream = await candidateClient.chat.completions.create({
+          model: candidateInfo.model,
           messages: messages as any,
           temperature,
           max_tokens,
-          provider: openrouterCustomProvider,
           stream: true,
           ...(tools && { tools }),
           ...(tool_choice && { tool_choice }),
           ...(response_format && { response_format }),
+          ...(candidateInfo.openrouterCustomProvider && { provider: candidateInfo.openrouterCustomProvider }),
         }) as unknown as AsyncIterable<ChatCompletionChunkDto>;
-        usedModel = candidate;
-        break;
+        if (stream) break;
       } catch (err) {
-        this.logger.warn(`Streaming with model ${candidate} failed: ${err.message}`);
+        this.logger.warn(`Streaming with model ${candidateInfo.model} (provider: ${candidateInfo.provider}) failed: ${err.message}`);
         lastError = err;
-        continue;
       }
     }
 
