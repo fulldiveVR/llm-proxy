@@ -29,21 +29,21 @@ export class CreditsByModelsGuard implements CanActivate {
     }
 
     private validateModelAccess(request: any, freeModelsConfig: any): void {
-        const requestBody = request.body;
-        const requestModel = requestBody?.model;
+        // const requestBody = request.body;
+        // const requestModel = requestBody?.model;
 
-        if (!requestModel) {
-            throw new ForbiddenException('Model is required for users without subscription');
-        }
+        // if (!requestModel) {
+        //     throw new ForbiddenException('Model is required for users without subscription');
+        // }
 
-        const allowedModels: string[] = freeModelsConfig.allowedModels;
+        // const allowedModels: string[] = freeModelsConfig.allowedModels;
 
-        if (!allowedModels.includes(requestModel)) {
-            // Replace with default free model instead of throwing error
-            const defaultFreeModel = allowedModels[0];
-            requestBody.model = defaultFreeModel;
-            console.log(`User without subscription requested ${requestModel}, replaced with ${defaultFreeModel}`);
-        }
+        // if (!allowedModels.includes(requestModel)) {
+        //     // Replace with default free model instead of throwing error
+        //     const defaultFreeModel = allowedModels[0];
+        //     requestBody.model = defaultFreeModel;
+        //     console.log(`User without subscription requested ${requestModel}, replaced with ${defaultFreeModel}`);
+        // }
     }
 
 }

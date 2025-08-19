@@ -78,7 +78,7 @@ export class LLMProxyController {
       const request: ILLMRequest = {
         ...requestDto,
         user: user.provider?.email?.id || user.id,
-        provider: effectiveProvider, // X-Provider header overrides body provider
+        // provider: effectiveProvider, // X-Provider header overrides body provider
       };
 
       // Handle streaming response

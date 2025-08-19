@@ -21,3 +21,4 @@ src/api/schemas/specs/*
 # Built JS in our apps
 /build*
 /dist*
+/test-stand/data*
