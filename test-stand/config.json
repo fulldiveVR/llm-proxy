@@ -1,0 +1,347 @@
+[
+  {
+    "name": "Labeling process",
+    "dataFile": "data/data.json",
+    "prompt": "You are an expert content analyst tasked with extracting the most important tags and creating a summary from any type of content.\n\nYour task:\n1. Analyze the input content and identify its core themes and subjects\n2. Extract and categorize the most important information into three types:\n   - Categories: Broad topic areas and subject matters (e.g., \"technology\", \"business\", \"science\")\n   - Entities: Specific names, organizations, products, people, places (e.g., \"OpenAI\", \"New York\", \"iPhone\")\n   - Tags: Key concepts, themes, and searchable keywords (e.g., \"machine learning\", \"innovation\", \"sustainability\")\n3. For each item, provide:\n   - item: the actual tag/category/entity\n   - confidence: 0-100% how certain you are this represents the content (think carefully about how prominently this appears and how central it is to the content before assigning confidence)\n4. Identify the primary intent or purpose of the content (e.g., \"inform about trends\", \"explain concept\", \"tell story\")\n5. Create a comprehensive summary that captures the main points, key information, and purpose of the content\n6. Be HIGHLY SELECTIVE - only include items that are central to understanding the content\n\n${userTagsSection}\n\nGuidelines:\n- Maximum 3 categories (most relevant broad topics)\n- Maximum 3 entities (most important names/organizations/places)\n- Maximum 5 tags (most relevant concepts/keywords)\n- Tags should be single words when possible; use multi-word phrases only when necessary\n- Only include items that appear prominently or are central themes\n- Intent should be clear and specific\n- Summary should be comprehensive and informative\n- Use common terminology that people would search for\n\nInput content:\n\"\"\"\n${content}\n\"\"\"\n",
+    "model": "google/gemma-3-4b-it",
+    "temperature": 0.2,
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "context_analysis",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "description": "Up to three broad topic areas that best represent the content (e.g., 'technology', 'business').",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Category name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "entities": {
+              "description": "Up to three specific proper nouns or titles mentioned in the content (e.g., company names, products).",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Entity name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "description": "Up to five key concepts, themes, or keywords relevant for search and filtering.",
+              "type": "array",
+              "maxItems": 5,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Tag text" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "intent": { "type": "string", "description": "Primary intent or purpose of the content (e.g., 'inform_about_trends')." },
+            "content_summary": { "type": "string", "description": "Comprehensive summary of the content." }
+          },
+          "required": ["categories", "entities", "tags", "intent", "content_summary"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "evaluationPrompt": "Act as a strict quality assurance agent. Evaluate the AI's response to the user's query.\n\n**Guidelines:**\n- **Score (1-10):** 10 is a perfect, flawless response. 1 is completely incorrect or irrelevant.\n- **Comments:** Be brutally concise. Only note critical flaws (e.g., \"Factual error on X\", \"Failed to address Y\") or exceptional strengths (e.g., \"Comprehensive solution with clear examples\"). Omit comments if the response is perfectly adequate.\n\n**Output Format:** Return ONLY a valid JSON object: { \"score\": number, \"comments\": \"string\" }\n\n**User Query:** ${request}\n\n**AI Response:** ${response}",
+    "evaluationModel": "gpt-4o-mini",
+    "evaluationTemperature": 0.2,
+    "outputFile": "data/labeling-results-google-gemma-3-4b-it.json"
+  },
+  {
+    "name": "Labeling process",
+    "dataFile": "data/data.json",
+    "prompt": "You are an expert content analyst tasked with extracting the most important tags and creating a summary from any type of content.\n\nYour task:\n1. Analyze the input content and identify its core themes and subjects\n2. Extract and categorize the most important information into three types:\n   - Categories: Broad topic areas and subject matters (e.g., \"technology\", \"business\", \"science\")\n   - Entities: Specific names, organizations, products, people, places (e.g., \"OpenAI\", \"New York\", \"iPhone\")\n   - Tags: Key concepts, themes, and searchable keywords (e.g., \"machine learning\", \"innovation\", \"sustainability\")\n3. For each item, provide:\n   - item: the actual tag/category/entity\n   - confidence: 0-100% how certain you are this represents the content (think carefully about how prominently this appears and how central it is to the content before assigning confidence)\n4. Identify the primary intent or purpose of the content (e.g., \"inform about trends\", \"explain concept\", \"tell story\")\n5. Create a comprehensive summary that captures the main points, key information, and purpose of the content\n6. Be HIGHLY SELECTIVE - only include items that are central to understanding the content\n\n${userTagsSection}\n\nGuidelines:\n- Maximum 3 categories (most relevant broad topics)\n- Maximum 3 entities (most important names/organizations/places)\n- Maximum 5 tags (most relevant concepts/keywords)\n- Tags should be single words when possible; use multi-word phrases only when necessary\n- Only include items that appear prominently or are central themes\n- Intent should be clear and specific\n- Summary should be comprehensive and informative\n- Use common terminology that people would search for\n\nInput content:\n\"\"\"\n${content}\n\"\"\"\n",
+    "model": "meta-llama/llama-4-maverick",
+    "temperature": 0.2,
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "context_analysis",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "description": "Up to three broad topic areas that best represent the content (e.g., 'technology', 'business').",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Category name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "entities": {
+              "description": "Up to three specific proper nouns or titles mentioned in the content (e.g., company names, products).",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Entity name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "description": "Up to five key concepts, themes, or keywords relevant for search and filtering.",
+              "type": "array",
+              "maxItems": 5,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Tag text" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "intent": { "type": "string", "description": "Primary intent or purpose of the content (e.g., 'inform_about_trends')." },
+            "content_summary": { "type": "string", "description": "Comprehensive summary of the content." }
+          },
+          "required": ["categories", "entities", "tags", "intent", "content_summary"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "evaluationPrompt": "Act as a strict quality assurance agent. Evaluate the AI's response to the user's query.\n\n**Guidelines:**\n- **Score (1-10):** 10 is a perfect, flawless response. 1 is completely incorrect or irrelevant.\n- **Comments:** Be brutally concise. Only note critical flaws (e.g., \"Factual error on X\", \"Failed to address Y\") or exceptional strengths (e.g., \"Comprehensive solution with clear examples\"). Omit comments if the response is perfectly adequate.\n\n**Output Format:** Return ONLY a valid JSON object: { \"score\": number, \"comments\": \"string\" }\n\n**User Query:** ${request}\n\n**AI Response:** ${response}",
+    "evaluationModel": "gpt-4o-mini",
+    "evaluationTemperature": 0.2,
+    "outputFile": "data/labeling-results-meta-llama-llama-4-maverickt.json"
+  },
+  {
+    "name": "Labeling process",
+    "dataFile": "data/data.json",
+    "prompt": "You are an expert content analyst tasked with extracting the most important tags and creating a summary from any type of content.\n\nYour task:\n1. Analyze the input content and identify its core themes and subjects\n2. Extract and categorize the most important information into three types:\n   - Categories: Broad topic areas and subject matters (e.g., \"technology\", \"business\", \"science\")\n   - Entities: Specific names, organizations, products, people, places (e.g., \"OpenAI\", \"New York\", \"iPhone\")\n   - Tags: Key concepts, themes, and searchable keywords (e.g., \"machine learning\", \"innovation\", \"sustainability\")\n3. For each item, provide:\n   - item: the actual tag/category/entity\n   - confidence: 0-100% how certain you are this represents the content (think carefully about how prominently this appears and how central it is to the content before assigning confidence)\n4. Identify the primary intent or purpose of the content (e.g., \"inform about trends\", \"explain concept\", \"tell story\")\n5. Create a comprehensive summary that captures the main points, key information, and purpose of the content\n6. Be HIGHLY SELECTIVE - only include items that are central to understanding the content\n\n${userTagsSection}\n\nGuidelines:\n- Maximum 3 categories (most relevant broad topics)\n- Maximum 3 entities (most important names/organizations/places)\n- Maximum 5 tags (most relevant concepts/keywords)\n- Tags should be single words when possible; use multi-word phrases only when necessary\n- Only include items that appear prominently or are central themes\n- Intent should be clear and specific\n- Summary should be comprehensive and informative\n- Use common terminology that people would search for\n\nInput content:\n\"\"\"\n${content}\n\"\"\"\n",
+    "model": "meta-llama/llama-3.1-70b-instruct",
+    "temperature": 0.2,
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "context_analysis",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "description": "Up to three broad topic areas that best represent the content (e.g., 'technology', 'business').",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Category name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "entities": {
+              "description": "Up to three specific proper nouns or titles mentioned in the content (e.g., company names, products).",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Entity name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "description": "Up to five key concepts, themes, or keywords relevant for search and filtering.",
+              "type": "array",
+              "maxItems": 5,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Tag text" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "intent": { "type": "string", "description": "Primary intent or purpose of the content (e.g., 'inform_about_trends')." },
+            "content_summary": { "type": "string", "description": "Comprehensive summary of the content." }
+          },
+          "required": ["categories", "entities", "tags", "intent", "content_summary"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "evaluationPrompt": "Act as a strict quality assurance agent. Evaluate the AI's response to the user's query.\n\n**Guidelines:**\n- **Score (1-10):** 10 is a perfect, flawless response. 1 is completely incorrect or irrelevant.\n- **Comments:** Be brutally concise. Only note critical flaws (e.g., \"Factual error on X\", \"Failed to address Y\") or exceptional strengths (e.g., \"Comprehensive solution with clear examples\"). Omit comments if the response is perfectly adequate.\n\n**Output Format:** Return ONLY a valid JSON object: { \"score\": number, \"comments\": \"string\" }\n\n**User Query:** ${request}\n\n**AI Response:** ${response}",
+    "evaluationModel": "gpt-4o-mini",
+    "evaluationTemperature": 0.2,
+    "outputFile": "data/labeling-results-meta-llama-llama-3.1-70b-instruct.json"
+  },
+  {
+    "name": "Labeling process",
+    "dataFile": "data/data.json",
+    "prompt": "You are an expert content analyst tasked with extracting the most important tags and creating a summary from any type of content.\n\nYour task:\n1. Analyze the input content and identify its core themes and subjects\n2. Extract and categorize the most important information into three types:\n   - Categories: Broad topic areas and subject matters (e.g., \"technology\", \"business\", \"science\")\n   - Entities: Specific names, organizations, products, people, places (e.g., \"OpenAI\", \"New York\", \"iPhone\")\n   - Tags: Key concepts, themes, and searchable keywords (e.g., \"machine learning\", \"innovation\", \"sustainability\")\n3. For each item, provide:\n   - item: the actual tag/category/entity\n   - confidence: 0-100% how certain you are this represents the content (think carefully about how prominently this appears and how central it is to the content before assigning confidence)\n4. Identify the primary intent or purpose of the content (e.g., \"inform about trends\", \"explain concept\", \"tell story\")\n5. Create a comprehensive summary that captures the main points, key information, and purpose of the content\n6. Be HIGHLY SELECTIVE - only include items that are central to understanding the content\n\n${userTagsSection}\n\nGuidelines:\n- Maximum 3 categories (most relevant broad topics)\n- Maximum 3 entities (most important names/organizations/places)\n- Maximum 5 tags (most relevant concepts/keywords)\n- Tags should be single words when possible; use multi-word phrases only when necessary\n- Only include items that appear prominently or are central themes\n- Intent should be clear and specific\n- Summary should be comprehensive and informative\n- Use common terminology that people would search for\n\nInput content:\n\"\"\"\n${content}\n\"\"\"\n",
+    "model": "meta-llama/llama-4-scout",
+    "temperature": 0.2,
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "context_analysis",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "description": "Up to three broad topic areas that best represent the content (e.g., 'technology', 'business').",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Category name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "entities": {
+              "description": "Up to three specific proper nouns or titles mentioned in the content (e.g., company names, products).",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Entity name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "description": "Up to five key concepts, themes, or keywords relevant for search and filtering.",
+              "type": "array",
+              "maxItems": 5,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Tag text" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "intent": { "type": "string", "description": "Primary intent or purpose of the content (e.g., 'inform_about_trends')." },
+            "content_summary": { "type": "string", "description": "Comprehensive summary of the content." }
+          },
+          "required": ["categories", "entities", "tags", "intent", "content_summary"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "evaluationPrompt": "Act as a strict quality assurance agent. Evaluate the AI's response to the user's query.\n\n**Guidelines:**\n- **Score (1-10):** 10 is a perfect, flawless response. 1 is completely incorrect or irrelevant.\n- **Comments:** Be brutally concise. Only note critical flaws (e.g., \"Factual error on X\", \"Failed to address Y\") or exceptional strengths (e.g., \"Comprehensive solution with clear examples\"). Omit comments if the response is perfectly adequate.\n\n**Output Format:** Return ONLY a valid JSON object: { \"score\": number, \"comments\": \"string\" }\n\n**User Query:** ${request}\n\n**AI Response:** ${response}",
+    "evaluationModel": "gpt-4o-mini",
+    "evaluationTemperature": 0.2,
+    "outputFile": "data/labeling-results-meta-llama-llama-4-scout.json"
+  },
+  {
+    "name": "Labeling process",
+    "dataFile": "data/data.json",
+    "prompt": "You are an expert content analyst tasked with extracting the most important tags and creating a summary from any type of content.\n\nYour task:\n1. Analyze the input content and identify its core themes and subjects\n2. Extract and categorize the most important information into three types:\n   - Categories: Broad topic areas and subject matters (e.g., \"technology\", \"business\", \"science\")\n   - Entities: Specific names, organizations, products, people, places (e.g., \"OpenAI\", \"New York\", \"iPhone\")\n   - Tags: Key concepts, themes, and searchable keywords (e.g., \"machine learning\", \"innovation\", \"sustainability\")\n3. For each item, provide:\n   - item: the actual tag/category/entity\n   - confidence: 0-100% how certain you are this represents the content (think carefully about how prominently this appears and how central it is to the content before assigning confidence)\n4. Identify the primary intent or purpose of the content (e.g., \"inform about trends\", \"explain concept\", \"tell story\")\n5. Create a comprehensive summary that captures the main points, key information, and purpose of the content\n6. Be HIGHLY SELECTIVE - only include items that are central to understanding the content\n\n${userTagsSection}\n\nGuidelines:\n- Maximum 3 categories (most relevant broad topics)\n- Maximum 3 entities (most important names/organizations/places)\n- Maximum 5 tags (most relevant concepts/keywords)\n- Tags should be single words when possible; use multi-word phrases only when necessary\n- Only include items that appear prominently or are central themes\n- Intent should be clear and specific\n- Summary should be comprehensive and informative\n- Use common terminology that people would search for\n\nInput content:\n\"\"\"\n${content}\n\"\"\"\n",
+    "model": "qwen/qwen3-235b-a22b-2507",
+    "temperature": 0.2,
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "context_analysis",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "description": "Up to three broad topic areas that best represent the content (e.g., 'technology', 'business').",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Category name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "entities": {
+              "description": "Up to three specific proper nouns or titles mentioned in the content (e.g., company names, products).",
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Entity name" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "description": "Up to five key concepts, themes, or keywords relevant for search and filtering.",
+              "type": "array",
+              "maxItems": 5,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item": { "type": "string", "description": "Tag text" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 100, "description": "Model confidence (0-100)" }
+                },
+                "required": ["item", "confidence"],
+                "additionalProperties": false
+              }
+            },
+            "intent": { "type": "string", "description": "Primary intent or purpose of the content (e.g., 'inform_about_trends')." },
+            "content_summary": { "type": "string", "description": "Comprehensive summary of the content." }
+          },
+          "required": ["categories", "entities", "tags", "intent", "content_summary"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "evaluationPrompt": "Act as a strict quality assurance agent. Evaluate the AI's response to the user's query.\n\n**Guidelines:**\n- **Score (1-10):** 10 is a perfect, flawless response. 1 is completely incorrect or irrelevant.\n- **Comments:** Be brutally concise. Only note critical flaws (e.g., \"Factual error on X\", \"Failed to address Y\") or exceptional strengths (e.g., \"Comprehensive solution with clear examples\"). Omit comments if the response is perfectly adequate.\n\n**Output Format:** Return ONLY a valid JSON object: { \"score\": number, \"comments\": \"string\" }\n\n**User Query:** ${request}\n\n**AI Response:** ${response}",
+    "evaluationModel": "gpt-4o-mini",
+    "evaluationTemperature": 0.2,
+    "outputFile": "data/labeling-results-qwen-qwen3-235b-a22b-2507.json"
+  }
+]

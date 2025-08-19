@@ -60,9 +60,17 @@ export class LLMProxyService {
     const dbModel = await this.modelsRepository.getById(modelId);
  
     if (!dbModel) {
-      throw new Error(`Model "${modelId}" not found`);
+      // Temporary fallback for local testing – if the model is not found in the DB, use OpenRouter with the provided modelId as-is
+      this.logger.warn(`Model "${modelId}" not found in DB. Falling back to default provider 'openrouter' with the same model id (temporary behaviour).`);
+
+      return {
+        provider: ModelProvider.OpenRouter,
+        model: modelId,
+        openrouterCustomProvider: undefined,
+        fallbackModels: [],
+      };
     }
- 
+
     return {
       provider: dbModel.provider,
       model: dbModel.id,
