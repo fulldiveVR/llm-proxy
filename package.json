@@ -15,6 +15,7 @@
     "lint": "eslint 'src/**/*.ts'",
     "prettier-format": "prettier --config .prettierrc.yml 'src/**/*.ts' --write",
     "test-stand": "ts-node test-stand/index.ts",
+    "probe:providers": "ts-node test-stand/probe-model-providers.ts",
     "generate:domain:core": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_opt=useReadonlyTypes=true --ts_proto_opt=env=node --ts_proto_opt=outputEncodeMethods=false --ts_proto_opt=outputJsonMethods=false --ts_proto_opt=unrecognizedEnum=false --ts_proto_opt=stringEnums=true --experimental_allow_proto3_optional --ts_proto_opt=removeEnumPrefix=true",
     "generate:domain:auth": "yarn generate:domain:core --ts_proto_out ./src/domain/_generated/auth --proto_path ./domain/ai-auth/v1/ ./domain/ai-auth/v1/*.proto",
     "generate:domain:billing": "yarn generate:domain:core --ts_proto_out ./src/domain/_generated/billing --ts_proto_opt=stringEnums=false --proto_path ./domain/billing/v1/ ./domain/billing/v1/*.proto",

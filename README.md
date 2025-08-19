@@ -371,6 +371,39 @@ yarn test
 yarn test:cov
 ```
 
+### 🧪 Test Stand
+
+The `test-stand/` folder contains a lightweight evaluation harness that can run one-off or batch quality checks against your local LLM-Proxy instance.
+
+#### Prerequisites
+1. **Local proxy running** – Start the service on <http://localhost:8080> (the default in `config/default.yml`):
+   ```bash
+   yarn start:dev
+   ```
+2. **Access token** – Export a key that the proxy will accept (or create one in your auth DB):
+   ```bash
+   export LLM_PROXY_API_KEY="your-test-key"
+   ```
+3. (Optional) **Custom dataset/config** – Prepare a JSON config describing the test cases (see `test-stand/config.json` for a fully-documented example).
+
+#### Running with the default config
+```bash
+# Executes test-stand/index.ts with test-stand/config.json
+yarn test-stand
+```
+
+#### Using a custom config file
+```bash
+# Point the runner to any JSON config
+yarn test-stand path/to/my-config.json
+```
+
+#### Output
+* Per-item and aggregate results are written to the path specified by `outputFile` in the config (defaults to `test-stand/data/*-results.json`).
+* A concise summary (median score, error count) is printed to the console after each test case and again at the end.
+
+Use these results to compare model quality, prompt iterations, or regression-test changes to your proxy.
+
 ## Dependencies
 
 ### Core Dependencies
@@ -530,4 +563,37 @@ curl -X POST http://localhost:3000/v1/chat/completions \
 2. Verify endpoint: `curl http://localhost:3000/health`
 3. Test with OpenAI client: Use official OpenAI SDK with proxy base URL
 4. Validate request format: Ensure JSON matches OpenAI API specification
+
+## Model Provider Probe Utility
+
+The repository includes a CLI script that can probe OpenRouter models, test each available provider for structured-output capability, and generate a human-readable report.
+
+### Prerequisites
+
+```bash
+export OPENROUTER_API_KEY="sk-..."
+```
+
+### Usage
+
+```bash
+# With yarn
+yarn probe:providers <author/slug> [author/slug ...]
+
+# Example
+yarn probe:providers meta-llama/llama-4-maverick openai/gpt-oss-20b
+```
+
+With npm:
+
+```bash
+npm run probe:providers -- <author/slug> [author/slug ...]
+```
+
+### Output
+
+* JSON results: `test-stand/data/results/model-provider-results.json`
+* Markdown report: `test-stand/data/results/provider-report.md`
+
+Run the command without arguments to see the usage help.
 
