@@ -55,12 +55,12 @@ async function fetchModelEndpoints(modelId: string, apiKey: string): Promise<End
 
 async function testProvider(modelId: string, provider: EndpointInfo, client: OpenAI): Promise<void> {
   console.log(`🔍 Testing model '${modelId}' with provider '${provider.provider_name}'...`);
+  const startMs = Date.now();
   try {
     const resp = await (client as any).chat.completions.create({
       model: modelId,
       provider: {
-        order: [provider.provider_name],
-        allow_fallbacks: false,
+        only: [provider.provider_name]
       },
       messages: [{ role: "user", content: "2+3" }],
       response_format: {
@@ -82,6 +82,7 @@ async function testProvider(modelId: string, provider: EndpointInfo, client: Ope
       },
       structured_outputs: true,
     });
+    const durationMs = Date.now() - startMs;
 
     const payload = JSON.parse((resp as any).choices[0].message.content || "{}");
     const hasResult = typeof payload?.result === "number";
@@ -89,16 +90,17 @@ async function testProvider(modelId: string, provider: EndpointInfo, client: Ope
 
     if (hasResult && hasExplanation) {
       provider.working = true;
-      console.log(`✅ ${modelId} with provider ${provider.provider_name} works and returned structured data`);
+      console.log(`✅ ${modelId} with provider ${provider.provider_name} returned structured data in ${durationMs} ms`);
     } else {
       provider.working = false;
       provider.error = "Structured response missing required fields";
-      console.error(`❌ ${modelId} with provider ${provider.provider_name} produced invalid structured output`);
+      console.error(`❌ ${modelId} with provider ${provider.provider_name} produced invalid structured output (took ${durationMs} ms)`);
     }
   } catch (err: any) {
+    const durationMs = Date.now() - startMs;
     provider.working = false;
     provider.error = (err?.message || String(err)).substring(0, 200);
-    console.error(`❌ ${modelId} with provider ${provider.provider_name} failed: ${provider.error}`);
+    console.error(`❌ ${modelId} with provider ${provider.provider_name} failed after ${durationMs} ms: ${provider.error}`);
   }
 }
 
